@@ -1,0 +1,108 @@
+@using System.Globalization
+
+<div class="lead-map-container" style="border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--border-color); background: var(--bg-card); display: flex; flex-direction: column;">
+    <!-- Map Header -->
+    <div style="padding: 10px 14px; background: rgba(0, 0, 0, 0.2); display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color);">
+        <div style="display: flex; align-items: center; gap: 8px; font-size: 0.84rem; font-weight: 600; color: var(--text-primary);">
+            <svg width="16" height="16" fill="none" stroke="var(--primary)" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+            </svg>
+            <span>Localização no Mapa</span>
+        </div>
+        <span style="font-size: 0.76rem; color: var(--text-muted);">@($"{Cidade} - {Estado}")</span>
+    </div>
+
+    <!-- Map Frame -->
+    <div style="width: 100%; height: 220px; position: relative; background: #1a1e2e;">
+        <iframe width="100%" 
+                height="100%" 
+                frameborder="0" 
+                scrolling="no" 
+                marginheight="0" 
+                marginwidth="0" 
+                src="@GetOsmEmbedUrl()" 
+                style="border: 0; filter: contrast(1.05);">
+        </iframe>
+    </div>
+
+    <!-- Map Actions Toolbar -->
+    <div style="padding: 10px 14px; display: flex; gap: 8px; flex-wrap: wrap; background: rgba(0,0,0,0.15);">
+        <a href="@GetGoogleMapsUrl()" target="_blank" class="btn-modern btn-primary btn-sm" style="flex: 1; min-width: 140px; justify-content: center;">
+            <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+            </svg>
+            Abrir no Google Maps
+        </a>
+
+        <a href="@GetWazeUrl()" target="_blank" class="btn-modern btn-secondary btn-sm" style="flex: 1; min-width: 120px; justify-content: center;">
+            <svg width="15" height="15" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2C6.48 2 2 6.48 2 12c0 1.94.55 3.75 1.5 5.28L2.05 21.9a.5.5 0 00.62.62l4.62-1.45A9.957 9.957 0 0012 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm-1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+            </svg>
+            Traçar Rota (Waze)
+        </a>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Nome { get; set; } = string.Empty;
+    [Parameter] public string? Endereco { get; set; }
+    [Parameter] public string Cidade { get; set; } = "Araras";
+    [Parameter] public string Estado { get; set; } = "SP";
+    [Parameter] public double? Latitude { get; set; }
+    [Parameter] public double? Longitude { get; set; }
+
+    private (double Lat, double Lon) GetEffectiveCoordinates()
+    {
+        if (Latitude.HasValue && Longitude.HasValue)
+        {
+            return (Latitude.Value, Longitude.Value);
+        }
+
+        var c = Cidade.ToLowerInvariant().Trim();
+        if (c.Contains("araras")) return (-22.3572, -47.3842);
+        if (c.Contains("leme")) return (-22.1856, -47.3892);
+        if (c.Contains("rio claro")) return (-22.4111, -47.5614);
+        if (c.Contains("limeira")) return (-22.5647, -47.4017);
+        if (c.Contains("piracicaba")) return (-22.7253, -47.6492);
+        if (c.Contains("campinas")) return (-22.9099, -47.0626);
+        if (c.Contains("santos")) return (-23.9618, -46.3322);
+        if (c.Contains("ribeirão preto")) return (-21.1767, -47.8103);
+        if (c.Contains("sorocaba")) return (-23.5015, -47.4526);
+        if (c.Contains("são paulo") || Estado.ToUpperInvariant() == "SP") return (-23.5505, -46.6333);
+
+        return (-23.5505, -46.6333);
+    }
+
+    private string GetOsmEmbedUrl()
+    {
+        var (lat, lon) = GetEffectiveCoordinates();
+        var delta = 0.012;
+        var bboxMinLon = (lon - delta).ToString("F5", CultureInfo.InvariantCulture);
+        var bboxMinLat = (lat - delta).ToString("F5", CultureInfo.InvariantCulture);
+        var bboxMaxLon = (lon + delta).ToString("F5", CultureInfo.InvariantCulture);
+        var bboxMaxLat = (lat + delta).ToString("F5", CultureInfo.InvariantCulture);
+        var markerLat = lat.ToString("F5", CultureInfo.InvariantCulture);
+        var markerLon = lon.ToString("F5", CultureInfo.InvariantCulture);
+
+        return $"https://www.openstreetmap.org/export/embed.html?bbox={bboxMinLon}%2C{bboxMinLat}%2C{bboxMaxLon}%2C{bboxMaxLat}&layer=mapnik&marker={markerLat}%2C{markerLon}";
+    }
+
+    private string GetGoogleMapsUrl()
+    {
+        var query = !string.IsNullOrWhiteSpace(Endereco) && !Endereco.Contains("Não informado", StringComparison.OrdinalIgnoreCase)
+            ? $"{Nome}, {Endereco}, {Cidade} - {Estado}".Trim()
+            : $"{Nome}, {Cidade} - {Estado}".Trim();
+
+        return $"https://www.google.com/maps/search/?api=1&query={Uri.EscapeDataString(query)}";
+    }
+
+    private string GetWazeUrl()
+    {
+        var query = !string.IsNullOrWhiteSpace(Endereco)
+            ? $"{Nome}, {Endereco}, {Cidade} - {Estado}".Trim()
+            : $"{Nome}, {Cidade} - {Estado}".Trim();
+
+        return $"https://waze.com/ul?q={Uri.EscapeDataString(query)}";
+    }
+}

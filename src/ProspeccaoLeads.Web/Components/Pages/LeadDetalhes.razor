@@ -141,20 +141,13 @@ else
                     </div>
                 </div>
 
-                <!-- Localização no Mapa -->
-                <div class="card-glass">
-                    <h4 style="font-size: 1rem; margin-bottom: 12px; color: var(--text-primary);">Mapa & Localização</h4>
-                    <p style="font-size: 0.84rem; color: var(--text-secondary); margin-bottom: 14px;">
-                        Abra diretamente no Google Maps para ver a rota e o entorno do estabelecimento.
-                    </p>
-                    <a href="@_lead.GetGoogleMapsUrl()" target="_blank" class="btn-modern btn-secondary" style="width: 100%;">
-                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                        </svg>
-                        Abrir no Google Maps
-                    </a>
-                </div>
+                <!-- Localização no Mapa Interativo -->
+                <LeadMiniMap Nome="@_lead.Nome" 
+                             Endereco="@_lead.Endereco" 
+                             Cidade="@_lead.Cidade" 
+                             Estado="@_lead.Estado" 
+                             Latitude="@_lead.Latitude" 
+                             Longitude="@_lead.Longitude" />
             </div>
         </div>
     </div>
