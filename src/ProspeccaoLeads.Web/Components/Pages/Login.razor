@@ -1,0 +1,93 @@
+@page "/login"
+@layout AuthLayout
+@using ProspeccaoLeads.Application.DTOs.Auth
+@using ProspeccaoLeads.Application.Interfaces
+@using ProspeccaoLeads.Web.Services
+@inject IAuthService AuthService
+@inject CustomAuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+@inject ToastService ToastService
+
+<div class="card-glass" style="padding: 32px;">
+    <h2 style="font-size: 1.35rem; margin-bottom: 8px; color: var(--text-primary);">Acessar Conta</h2>
+    <p style="color: var(--text-secondary); font-size: 0.88rem; margin-bottom: 24px;">Entre com suas credenciais do Supabase ou teste em modo demo.</p>
+
+    <EditForm Model="_model" FormName="loginForm" OnValidSubmit="HandleLogin">
+        <DataAnnotationsValidator />
+
+        <div class="form-group">
+            <label class="form-label">E-mail</label>
+            <InputText class="form-control-custom" placeholder="seuemail@empresa.com" @bind-Value="_model.Email" />
+            <ValidationMessage For="() => _model.Email" style="color: var(--danger); font-size: 0.8rem; margin-top: 4px;" />
+        </div>
+
+        <div class="form-group">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <label class="form-label" style="margin: 0;">Senha</label>
+                <a href="recuperar-senha" style="color: var(--primary); font-size: 0.8rem; text-decoration: none;">Esqueceu a senha?</a>
+            </div>
+            <InputText type="password" class="form-control-custom" placeholder="••••••••" @bind-Value="_model.Password" />
+            <ValidationMessage For="() => _model.Password" style="color: var(--danger); font-size: 0.8rem; margin-top: 4px;" />
+        </div>
+
+        <button type="submit" class="btn-modern btn-primary" style="width: 100%; margin-top: 12px;" disabled="@_isLoading">
+            @if (_isLoading)
+            {
+                <span class="spinner"></span>
+                <span>Entrando...</span>
+            }
+            else
+            {
+                <span>Entrar no Sistema</span>
+            }
+        </button>
+
+        <button type="button" class="btn-modern btn-secondary" style="width: 100%; margin-top: 10px;" @onclick="HandleDemoLogin">
+            <span>⚡ Entrar com Conta Demonstração</span>
+        </button>
+    </EditForm>
+
+    <div style="text-align: center; margin-top: 24px; font-size: 0.88rem; color: var(--text-secondary);">
+        Não possui uma conta? <a href="cadastro" style="color: var(--primary); font-weight: 600; text-decoration: none;">Cadastre-se agora</a>
+    </div>
+</div>
+
+@code {
+    private readonly LoginDto _model = new()
+    {
+        Email = "admin@prospeccaoleads.com",
+        Password = "senha123"
+    };
+
+    private bool _isLoading = false;
+
+    private async Task HandleLogin()
+    {
+        _isLoading = true;
+        try
+        {
+            var result = await AuthService.LoginAsync(_model);
+            if (result.IsSuccess && result.Value != null)
+            {
+                AuthStateProvider.NotifyUserAuthentication(result.Value);
+                ToastService.ShowSuccess($"Bem-vindo de volta, {result.Value.Name}!");
+                Navigation.NavigateTo("");
+            }
+            else
+            {
+                ToastService.ShowError(result.ErrorMessage ?? "Falha na autenticação.");
+            }
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task HandleDemoLogin()
+    {
+        _model.Email = "admin@prospeccaoleads.com";
+        _model.Password = "senha123";
+        await HandleLogin();
+    }
+}

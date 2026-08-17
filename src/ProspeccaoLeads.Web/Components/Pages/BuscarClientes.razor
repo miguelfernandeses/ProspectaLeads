@@ -1,0 +1,369 @@
+@page "/buscar"
+@using ProspeccaoLeads.Application.DTOs.Estabelecimento
+@using ProspeccaoLeads.Application.DTOs.Lead
+@using ProspeccaoLeads.Application.Interfaces
+@using ProspeccaoLeads.Domain.Enums
+@using ProspeccaoLeads.Web.Components.Common
+@using ProspeccaoLeads.Web.Components.Leads
+@using ProspeccaoLeads.Web.Services
+@inject IEstabelecimentoService EstabelecimentoService
+@inject ILeadService LeadService
+@inject IAuthService AuthService
+@inject ToastService ToastService
+@inject NavigationManager Navigation
+
+@rendermode InteractiveServer
+
+<div style="display: flex; flex-direction: column; gap: 24px;">
+
+    <!-- Search Header & Box -->
+    <div class="card-glass" style="padding: 28px;">
+        <div style="margin-bottom: 20px;">
+            <h1 style="font-size: 1.5rem; font-weight: 800; color: var(--text-primary);">
+                Buscar Novos Estabelecimentos
+            </h1>
+            <p style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 4px;">
+                Informe o nicho de atuação e a cidade para encontrar empresas com telefones, endereços e redes sociais.
+            </p>
+        </div>
+
+        <EditForm Model="_buscaDto" FormName="searchForm" OnValidSubmit="ExecutarBuscaAsync">
+            <DataAnnotationsValidator />
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 16px; align-items: flex-end;">
+                <!-- Nicho -->
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label">Nicho ou Ramo de Negócio</label>
+                    <InputText class="form-control-custom" placeholder="Ex.: Clínicas odontológicas, Restaurantes, Academias..." @bind-Value="_buscaDto.Nicho" />
+                    <ValidationMessage For="() => _buscaDto.Nicho" style="color: var(--danger); font-size: 0.8rem; margin-top: 4px;" />
+                </div>
+
+                <!-- Localização -->
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label">Localização (Cidade - UF)</label>
+                    <InputText class="form-control-custom" placeholder="Ex.: São Paulo - SP, Campinas, Curitiba..." @bind-Value="_buscaDto.Localizacao" />
+                    <ValidationMessage For="() => _buscaDto.Localizacao" style="color: var(--danger); font-size: 0.8rem; margin-top: 4px;" />
+                </div>
+
+                <!-- Botão de Busca -->
+                <button type="submit" class="btn-modern btn-primary" style="height: 48px; padding: 0 28px;" disabled="@_isSearching">
+                    @if (_isSearching)
+                    {
+                        <span class="spinner"></span>
+                        <span>Pesquisando...</span>
+                    }
+                    else
+                    {
+                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                        <span>BUSCAR CLIENTES</span>
+                    }
+                </button>
+            </div>
+        </EditForm>
+
+        <!-- Chips Sugestões de Nicho -->
+        <div style="margin-top: 18px;">
+            <span style="font-size: 0.78rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Exemplos de Nichos Populares:</span>
+            <div class="chips-container">
+                @foreach (var chip in _nichosSugeridos)
+                {
+                    <button type="button" class="chip-btn" @onclick="() => SelecionarNicho(chip)">
+                        @chip
+                    </button>
+                }
+            </div>
+        </div>
+
+        <!-- Chips Sugestões de Localização -->
+        <div style="margin-top: 12px;">
+            <span style="font-size: 0.78rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Cidades em Destaque:</span>
+            <div class="chips-container">
+                @foreach (var city in _cidadesSugeridas)
+                {
+                    <button type="button" class="chip-btn" @onclick="() => SelecionarCidade(city)">
+                        📍 @city
+                    </button>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Resultados da Busca -->
+    @if (_isSearching)
+    {
+        <div class="card-glass" style="text-align: center; padding: 60px 20px;">
+            <div class="spinner" style="width: 42px; height: 42px; border-width: 3px; border-top-color: var(--primary); margin: 0 auto 16px;"></div>
+            <h3 style="font-size: 1.15rem; color: var(--text-primary);">Pesquisando estabelecimentos na região...</h3>
+            <p style="color: var(--text-muted); font-size: 0.88rem;">Consultando dados geolocalizados, contatos e avaliações.</p>
+        </div>
+    }
+    else if (_resultados != null && _resultados.Count > 0)
+    {
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+            <div>
+                <span style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary);">
+                    @_resultados.Count estabelecimentos encontrados
+                </span>
+                <span style="font-size: 0.85rem; color: var(--text-muted); margin-left: 8px;">
+                    para "@_buscaDto.Nicho" em @_buscaDto.Localizacao
+                </span>
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+                <button type="button" class="btn-modern btn-success btn-sm" @onclick="SalvarTodosNovosAsync" disabled="@(_salvandoTodos || _resultados.All(r => r.JaSalvoComoLead))">
+                    @if (_salvandoTodos)
+                    {
+                        <span class="spinner"></span>
+                    }
+                    else
+                    {
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
+                        </svg>
+                    }
+                    <span>Salvar Todos os Não Cadastrados</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Tabela de Resultados -->
+        <div class="table-responsive">
+            <table class="table-modern">
+                <thead>
+                    <tr>
+                        <th>Estabelecimento</th>
+                        <th>Contato</th>
+                        <th>Localização</th>
+                        <th>Avaliação</th>
+                        <th>Fonte</th>
+                        <th style="text-align: right;">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in _resultados)
+                    {
+                        <tr>
+                            <td>
+                                <div style="font-weight: 700; color: var(--text-primary); font-size: 0.95rem;">@item.Nome</div>
+                                <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 2px;">@(item.Categoria ?? _buscaDto.Nicho)</div>
+                            </td>
+                            <td>
+                                <div style="display: flex; flex-direction: column; gap: 3px;">
+                                    @if (!string.IsNullOrWhiteSpace(item.Telefone))
+                                    {
+                                        <div style="font-size: 0.85rem; color: var(--text-secondary); display: flex; align-items: center; gap: 4px;">
+                                            <span>📞</span> @item.Telefone
+                                        </div>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(item.Email))
+                                    {
+                                        <div style="font-size: 0.8rem; color: var(--text-muted); display: flex; align-items: center; gap: 4px;">
+                                            <span>✉️</span> @item.Email
+                                        </div>
+                                    }
+                                </div>
+                            </td>
+                            <td>
+                                <div style="font-size: 0.88rem; color: var(--text-primary);">@item.Endereco</div>
+                                <div style="font-size: 0.78rem; color: var(--text-muted);">@item.Cidade - @item.Estado</div>
+                            </td>
+                            <td>
+                                @if (item.Avaliacao.HasValue)
+                                {
+                                    <span class="rating-pill">⭐ @item.Avaliacao.Value.ToString("0.0") (@(item.QuantidadeAvaliacoes ?? 0))</span>
+                                }
+                                else
+                                {
+                                    <span style="font-size: 0.8rem; color: var(--text-muted);">-</span>
+                                }
+                            </td>
+                            <td>
+                                <span style="font-size: 0.78rem; color: var(--text-muted);">@item.Fonte</span>
+                            </td>
+                            <td style="text-align: right;">
+                                <div style="display: inline-flex; align-items: center; gap: 6px;">
+                                    @if (!string.IsNullOrWhiteSpace(item.GetWhatsAppUrl()))
+                                    {
+                                        <a href="@item.GetWhatsAppUrl()" target="_blank" class="btn-icon" title="Abrir no WhatsApp" style="color: #25D366;">
+                                            <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                                                <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
+                                            </svg>
+                                        </a>
+                                    }
+
+                                    <a href="@item.GetGoogleMapsUrl()" target="_blank" class="btn-icon" title="Abrir no Google Maps">
+                                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                        </svg>
+                                    </a>
+
+                                    @if (item.JaSalvoComoLead)
+                                    {
+                                        <button type="button" class="btn-modern btn-secondary btn-sm" disabled style="color: var(--success); border-color: rgba(16, 185, 129, 0.3);">
+                                            ✓ Salvo
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <button type="button" class="btn-modern btn-primary btn-sm" @onclick="() => SalvarLeadAsync(item)">
+                                            Salvar Lead
+                                        </button>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else if (_jaPesquisou)
+    {
+        <div class="card-glass" style="text-align: center; padding: 48px 20px;">
+            <div style="font-size: 2rem; margin-bottom: 10px;">🔍</div>
+            <h3 style="font-size: 1.15rem; color: var(--text-primary);">Nenhum estabelecimento encontrado</h3>
+            <p style="color: var(--text-secondary); font-size: 0.88rem; max-width: 460px; margin: 6px auto 0;">
+                Tente modificar o nicho informado (ex.: "Clínicas odontológicas" em vez de "Dentistas") ou alterar a cidade.
+            </p>
+        </div>
+    }
+</div>
+
+@code {
+    [SupplyParameterFromQuery(Name = "nicho")] public string? NichoQuery { get; set; }
+    [SupplyParameterFromQuery(Name = "local")] public string? LocalQuery { get; set; }
+
+    private readonly BuscaEstabelecimentoDto _buscaDto = new()
+    {
+        Nicho = "Clínicas odontológicas",
+        Localizacao = "São Paulo - SP"
+    };
+
+    private List<EstabelecimentoDto>? _resultados;
+    private bool _isSearching = false;
+    private bool _jaPesquisou = false;
+    private bool _salvandoTodos = false;
+    private Guid _userId;
+
+    private readonly string[] _nichosSugeridos = new[]
+    {
+        "Clínicas odontológicas", "Restaurantes", "Academias", "Salões de beleza",
+        "Oficinas mecânicas", "Imobiliárias", "Lojas de roupas", "Escritórios de contabilidade",
+        "Pet shops", "Farmácias"
+    };
+
+    private readonly string[] _cidadesSugeridas = new[]
+    {
+        "São Paulo - SP", "Campinas - SP", "Rio de Janeiro - RJ", "Belo Horizonte - MG",
+        "Curitiba - PR", "Brasília - DF", "Salvador - BA", "Porto Alegre - RS"
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        var session = await AuthService.GetCurrentUserAsync();
+        if (session != null)
+        {
+            _userId = session.UserId;
+        }
+
+        if (!string.IsNullOrWhiteSpace(NichoQuery))
+        {
+            _buscaDto.Nicho = NichoQuery;
+        }
+        if (!string.IsNullOrWhiteSpace(LocalQuery))
+        {
+            _buscaDto.Localizacao = LocalQuery;
+        }
+
+        if (!string.IsNullOrWhiteSpace(NichoQuery) || !string.IsNullOrWhiteSpace(LocalQuery))
+        {
+            await ExecutarBuscaAsync();
+        }
+    }
+
+    private void SelecionarNicho(string nicho)
+    {
+        _buscaDto.Nicho = nicho;
+    }
+
+    private void SelecionarCidade(string cidade)
+    {
+        _buscaDto.Localizacao = cidade;
+    }
+
+    private async Task ExecutarBuscaAsync()
+    {
+        _isSearching = true;
+        _jaPesquisou = true;
+        _resultados = null;
+
+        try
+        {
+            var res = await EstabelecimentoService.BuscarAsync(_buscaDto, _userId);
+            if (res.IsSuccess && res.Value != null)
+            {
+                _resultados = res.Value;
+                ToastService.ShowSuccess($"{_resultados.Count} estabelecimentos encontrados!");
+            }
+            else
+            {
+                ToastService.ShowWarning(res.ErrorMessage ?? "Nenhum resultado encontrado.");
+                _resultados = new();
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Erro ao realizar busca: {ex.Message}");
+        }
+        finally
+        {
+            _isSearching = false;
+        }
+    }
+
+    private async Task SalvarLeadAsync(EstabelecimentoDto item)
+    {
+        var result = await LeadService.SalvarEstabelecimentoAsync(item, _userId);
+        if (result.IsSuccess && result.Value != null)
+        {
+            item.JaSalvoComoLead = true;
+            item.LeadId = result.Value.Id;
+            ToastService.ShowSuccess($"'{item.Nome}' salvo em Meus Leads!");
+        }
+        else
+        {
+            ToastService.ShowWarning(result.ErrorMessage ?? "Não foi possível salvar o lead.");
+        }
+    }
+
+    private async Task SalvarTodosNovosAsync()
+    {
+        if (_resultados == null) return;
+        _salvandoTodos = true;
+
+        var salvos = 0;
+        foreach (var item in _resultados.Where(r => !r.JaSalvoComoLead))
+        {
+            var res = await LeadService.SalvarEstabelecimentoAsync(item, _userId);
+            if (res.IsSuccess && res.Value != null)
+            {
+                item.JaSalvoComoLead = true;
+                item.LeadId = res.Value.Id;
+                salvos++;
+            }
+        }
+
+        _salvandoTodos = false;
+        if (salvos > 0)
+        {
+            ToastService.ShowSuccess($"{salvos} novos leads foram salvos com sucesso!");
+        }
+        else
+        {
+            ToastService.ShowInfo("Todos os estabelecimentos já estavam salvos.");
+        }
+    }
+}

@@ -1,0 +1,24 @@
+@inherits LayoutComponentBase
+@using ProspeccaoLeads.Web.Components.Common
+
+<div class="app-container">
+    <NavMenu IsOpen="_sidebarOpen" />
+    
+    <div class="main-wrapper">
+        <Header OnToggleSidebar="ToggleSidebar" />
+        <main class="page-content">
+            @Body
+        </main>
+    </div>
+</div>
+
+<ToastContainer />
+
+@code {
+    private bool _sidebarOpen = false;
+
+    private void ToggleSidebar()
+    {
+        _sidebarOpen = !_sidebarOpen;
+    }
+}

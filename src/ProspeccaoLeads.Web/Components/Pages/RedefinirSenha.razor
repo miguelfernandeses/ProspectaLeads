@@ -1,0 +1,154 @@
+@page "/redefinir-senha"
+@layout AuthLayout
+@using ProspeccaoLeads.Application.DTOs.Auth
+@using ProspeccaoLeads.Application.Interfaces
+@using ProspeccaoLeads.Web.Services
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+@inject ToastService ToastService
+@inject IJSRuntime JS
+
+<div class="card-glass" style="padding: 32px;">
+    <h2 style="font-size: 1.35rem; margin-bottom: 8px; color: var(--text-primary);">Criar Nova Senha</h2>
+    <p style="color: var(--text-secondary); font-size: 0.88rem; margin-bottom: 24px;">
+        Digite sua nova senha para recuperar o acesso à sua conta.
+    </p>
+
+    @if (_isTokenChecking)
+    {
+        <div style="text-align: center; padding: 24px;">
+            <div class="spinner" style="width: 32px; height: 32px; border-top-color: var(--primary); margin: 0 auto 12px;"></div>
+            <div style="color: var(--text-secondary); font-size: 0.88rem;">Validando link de recuperação...</div>
+        </div>
+    }
+    else if (_tokenMissing)
+    {
+        <div style="background-color: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: var(--radius-md); padding: 18px; text-align: center; margin-bottom: 20px;">
+            <div style="font-size: 1.8rem; margin-bottom: 8px;">⚠️</div>
+            <div style="font-weight: 700; color: var(--danger); margin-bottom: 4px;">Link Inválido ou Expirado</div>
+            <div style="font-size: 0.84rem; color: var(--text-secondary); margin-bottom: 16px;">
+                Não foi possível identificar o token de recuperação. Solicite um novo link de redefinição.
+            </div>
+            <a href="recuperar-senha" class="btn-modern btn-primary" style="width: 100%;">Solicitar Novo Link</a>
+        </div>
+    }
+    else
+    {
+        <EditForm Model="_model" FormName="resetPasswordForm" OnValidSubmit="HandleResetPassword">
+            <DataAnnotationsValidator />
+
+            <div class="form-group">
+                <label class="form-label">Nova Senha</label>
+                <InputText type="password" class="form-control-custom" placeholder="•••••••• (mínimo 6 caracteres)" @bind-Value="_model.NewPassword" />
+                <ValidationMessage For="() => _model.NewPassword" style="color: var(--danger); font-size: 0.8rem; margin-top: 4px;" />
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Confirmar Nova Senha</label>
+                <InputText type="password" class="form-control-custom" placeholder="••••••••" @bind-Value="_model.ConfirmNewPassword" />
+                <ValidationMessage For="() => _model.ConfirmNewPassword" style="color: var(--danger); font-size: 0.8rem; margin-top: 4px;" />
+            </div>
+
+            <button type="submit" class="btn-modern btn-primary" style="width: 100%; margin-top: 12px;" disabled="@_isLoading">
+                @if (_isLoading)
+                {
+                    <span class="spinner"></span>
+                    <span>Salvando nova senha...</span>
+                }
+                else
+                {
+                    <span>Salvar Nova Senha</span>
+                }
+            </button>
+        </EditForm>
+
+        <div style="text-align: center; margin-top: 24px; font-size: 0.88rem; color: var(--text-secondary);">
+            Lembrou da senha anterior? <a href="login" style="color: var(--primary); font-weight: 600; text-decoration: none;">Ir para Login</a>
+        </div>
+    }
+</div>
+
+@code {
+    private readonly ChangePasswordDto _model = new();
+    private string? _accessToken;
+    private bool _isTokenChecking = true;
+    private bool _tokenMissing = false;
+    private bool _isLoading = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                // Extrai o access_token do hash (#access_token=...) ou da query string (?access_token=... ou ?code=...)
+                var hashOrSearch = await JS.InvokeAsync<string>("eval", "window.location.hash || window.location.search || ''");
+                
+                if (!string.IsNullOrWhiteSpace(hashOrSearch))
+                {
+                    var clean = hashOrSearch.TrimStart('#', '?');
+                    var paramsDict = clean.Split('&')
+                        .Select(p => p.Split('='))
+                        .Where(p => p.Length == 2)
+                        .ToDictionary(p => Uri.UnescapeDataString(p[0]), p => Uri.UnescapeDataString(p[1]));
+
+                    if (paramsDict.TryGetValue("access_token", out var token) && !string.IsNullOrWhiteSpace(token))
+                    {
+                        _accessToken = token;
+                        _tokenMissing = false;
+                    }
+                    else if (paramsDict.TryGetValue("code", out var code) && !string.IsNullOrWhiteSpace(code))
+                    {
+                        _accessToken = code;
+                        _tokenMissing = false;
+                    }
+                    else
+                    {
+                        _tokenMissing = true;
+                    }
+                }
+                else
+                {
+                    _tokenMissing = true;
+                }
+            }
+            catch
+            {
+                _tokenMissing = true;
+            }
+            finally
+            {
+                _isTokenChecking = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private async Task HandleResetPassword()
+    {
+        if (string.IsNullOrWhiteSpace(_accessToken))
+        {
+            ToastService.ShowError("Token de recuperação ausente.");
+            return;
+        }
+
+        _isLoading = true;
+        try
+        {
+            var result = await AuthService.UpdatePasswordWithTokenAsync(_accessToken, _model.NewPassword);
+            if (result.IsSuccess)
+            {
+                ToastService.ShowSuccess("Senha redefinida com sucesso! Você já pode entrar com sua nova senha.");
+                Navigation.NavigateTo("login");
+            }
+            else
+            {
+                ToastService.ShowError(result.ErrorMessage ?? "Erro ao redefinir a senha.");
+            }
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+}

@@ -1,0 +1,40 @@
+@using ProspeccaoLeads.Application.DTOs.Dashboard
+
+<div class="card-glass" style="height: 100%; display: flex; flex-direction: column;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h4 style="font-size: 1.05rem; font-weight: 700; color: var(--text-primary);">@Title</h4>
+        <span style="font-size: 0.8rem; color: var(--text-muted);">Top @Items.Count</span>
+    </div>
+
+    @if (Items == null || Items.Count == 0 || MaxValue == 0)
+    {
+        <div style="flex: 1; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 0.88rem; min-height: 220px;">
+            Nenhum dado registrado para exibir
+        </div>
+    }
+    else
+    {
+        <div style="display: flex; flex-direction: column; gap: 14px; justify-content: center; flex: 1;">
+            @foreach (var item in Items)
+            {
+                var percent = MaxValue > 0 ? (item.Value / MaxValue) * 100 : 0;
+                <div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.84rem; margin-bottom: 4px;">
+                        <span style="font-weight: 600; color: var(--text-primary);">@item.Label</span>
+                        <span style="font-weight: 700; color: var(--text-secondary);">@item.Value.ToString("N0") leads</span>
+                    </div>
+                    <div style="width: 100%; height: 10px; background-color: var(--bg-card); border-radius: var(--radius-full); overflow: hidden; border: 1px solid var(--border-subtle);">
+                        <div style="height: 100%; width: @percent%; background: linear-gradient(90deg, @(item.Color ?? "var(--primary)"), @(item.Color ?? "var(--primary)")dd); border-radius: var(--radius-full); transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);"></div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public string Title { get; set; } = "Ranking";
+    [Parameter] public List<ChartItemDto> Items { get; set; } = new();
+
+    private double MaxValue => Items?.Any() == true ? Math.Max(Items.Max(i => i.Value), 1) : 1;
+}

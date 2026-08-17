@@ -1,0 +1,48 @@
+@if (IsOpen)
+{
+    <div class="modal-backdrop-custom" @onclick="HandleBackdropClick">
+        <div class="modal-dialog-custom" style="max-width: 460px;" @onclick:stopPropagation="true">
+            <div class="modal-header-custom">
+                <h3 style="font-size: 1.15rem; margin: 0; color: var(--text-primary);">@Title</h3>
+                <button type="button" class="btn-icon" @onclick="CancelAsync">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body-custom">
+                <p style="color: var(--text-secondary); font-size: 0.95rem; line-height: 1.6;">@Message</p>
+            </div>
+            <div class="modal-footer-custom">
+                <button type="button" class="btn-modern btn-secondary" @onclick="CancelAsync">Cancelar</button>
+                <button type="button" class="btn-modern @(IsDanger ? "btn-outline-danger" : "btn-primary")" @onclick="ConfirmAsync">
+                    @ConfirmText
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public string Title { get; set; } = "Confirmar ação";
+    [Parameter] public string Message { get; set; } = "Tem certeza que deseja prosseguir?";
+    [Parameter] public string ConfirmText { get; set; } = "Confirmar";
+    [Parameter] public bool IsDanger { get; set; } = true;
+    [Parameter] public EventCallback<bool> OnResult { get; set; }
+
+    private async Task ConfirmAsync()
+    {
+        await OnResult.InvokeAsync(true);
+    }
+
+    private async Task CancelAsync()
+    {
+        await OnResult.InvokeAsync(false);
+    }
+
+    private async Task HandleBackdropClick()
+    {
+        await CancelAsync();
+    }
+}

@@ -1,0 +1,94 @@
+@page "/cadastro"
+@layout AuthLayout
+@using ProspeccaoLeads.Application.DTOs.Auth
+@using ProspeccaoLeads.Application.Interfaces
+@using ProspeccaoLeads.Web.Services
+@inject IAuthService AuthService
+@inject CustomAuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+@inject ToastService ToastService
+
+<div class="card-glass" style="padding: 32px;">
+    <h2 style="font-size: 1.35rem; margin-bottom: 8px; color: var(--text-primary);">Criar Nova Conta</h2>
+    <p style="color: var(--text-secondary); font-size: 0.88rem; margin-bottom: 24px;">Cadastre-se para prospectar clientes em todo o Brasil.</p>
+
+    <EditForm Model="_model" FormName="registerForm" OnValidSubmit="HandleRegister">
+        <DataAnnotationsValidator />
+
+        <div class="form-group">
+            <label class="form-label">Nome Completo</label>
+            <InputText class="form-control-custom" placeholder="Seu nome ou da sua empresa" @bind-Value="_model.Name" />
+            <ValidationMessage For="() => _model.Name" style="color: var(--danger); font-size: 0.8rem; margin-top: 4px;" />
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">E-mail</label>
+            <InputText class="form-control-custom" placeholder="seuemail@empresa.com" @bind-Value="_model.Email" />
+            <ValidationMessage For="() => _model.Email" style="color: var(--danger); font-size: 0.8rem; margin-top: 4px;" />
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Senha</label>
+            <InputText type="password" class="form-control-custom" placeholder="No mínimo 6 caracteres" @bind-Value="_model.Password" />
+            <ValidationMessage For="() => _model.Password" style="color: var(--danger); font-size: 0.8rem; margin-top: 4px;" />
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Confirmar Senha</label>
+            <InputText type="password" class="form-control-custom" placeholder="Repita sua senha" @bind-Value="_model.ConfirmPassword" />
+            <ValidationMessage For="() => _model.ConfirmPassword" style="color: var(--danger); font-size: 0.8rem; margin-top: 4px;" />
+        </div>
+
+        <button type="submit" class="btn-modern btn-primary" style="width: 100%; margin-top: 12px;" disabled="@_isLoading">
+            @if (_isLoading)
+            {
+                <span class="spinner"></span>
+                <span>Criando conta...</span>
+            }
+            else
+            {
+                <span>Cadastrar Gratuitamente</span>
+            }
+        </button>
+    </EditForm>
+
+    <div style="text-align: center; margin-top: 24px; font-size: 0.88rem; color: var(--text-secondary);">
+        Já possui conta? <a href="login" style="color: var(--primary); font-weight: 600; text-decoration: none;">Faça login</a>
+    </div>
+</div>
+
+@code {
+    private readonly RegisterDto _model = new();
+    private bool _isLoading = false;
+
+    private async Task HandleRegister()
+    {
+        _isLoading = true;
+        try
+        {
+            var result = await AuthService.RegisterAsync(_model);
+            if (result.IsSuccess && result.Value != null)
+            {
+                if (!string.IsNullOrWhiteSpace(result.Value.AccessToken))
+                {
+                    AuthStateProvider.NotifyUserAuthentication(result.Value);
+                    ToastService.ShowSuccess($"Conta criada com sucesso! Bem-vindo, {result.Value.Name}.");
+                    Navigation.NavigateTo("");
+                }
+                else
+                {
+                    ToastService.ShowSuccess($"Conta criada para '{result.Value.Email}'! Faça login ou verifique seu e-mail.");
+                    Navigation.NavigateTo("login");
+                }
+            }
+            else
+            {
+                ToastService.ShowError(result.ErrorMessage ?? "Falha ao registrar conta.");
+            }
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+}

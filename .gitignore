@@ -1,0 +1,30 @@
+# .NET Build artifacts
+bin/
+obj/
+*.user
+*.userosscache
+*.sln.docstates
+
+# Environment files (SENSITIVE - NEVER COMMIT TO GIT)
+.env
+.env.local
+.env.*.local
+*.local.json
+
+# SQLite local databases
+*.db
+*.db-shm
+*.db-wal
+
+# IDE files
+.vscode/
+.idea/
+*.suo
+*.userprefs
+
+# OS Files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store

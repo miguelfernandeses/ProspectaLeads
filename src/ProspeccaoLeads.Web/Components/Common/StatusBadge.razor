@@ -1,0 +1,33 @@
+@using ProspeccaoLeads.Domain.Enums
+
+<span class="status-badge @GetStatusCssClass()">
+    <span class="status-badge-dot"></span>
+    <span>@GetStatusLabel()</span>
+</span>
+
+@code {
+    [Parameter]
+    public StatusLead Status { get; set; }
+
+    private string GetStatusCssClass() => Status switch
+    {
+        StatusLead.Novo => "status-novo",
+        StatusLead.Interessado => "status-interessado",
+        StatusLead.Contatado => "status-contatado",
+        StatusLead.EmNegociacao => "status-emnegociacao",
+        StatusLead.Cliente => "status-cliente",
+        StatusLead.SemInteresse => "status-seminteresse",
+        _ => "status-novo"
+    };
+
+    private string GetStatusLabel() => Status switch
+    {
+        StatusLead.Novo => "Novo",
+        StatusLead.Interessado => "Interessado",
+        StatusLead.Contatado => "Contatado",
+        StatusLead.EmNegociacao => "Em Negociação",
+        StatusLead.Cliente => "Cliente",
+        StatusLead.SemInteresse => "Sem Interesse",
+        _ => Status.ToString()
+    };
+}

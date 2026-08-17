@@ -1,0 +1,58 @@
+@using ProspeccaoLeads.Application.DTOs.Dashboard
+
+<div class="card-glass" style="height: 100%; display: flex; flex-direction: column;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h4 style="font-size: 1.05rem; font-weight: 700; color: var(--text-primary);">@Title</h4>
+        <div style="display: flex; align-items: center; gap: 14px; font-size: 0.78rem;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+                <span style="width: 10px; height: 10px; border-radius: 2px; background-color: var(--primary);"></span>
+                <span style="color: var(--text-secondary);">Leads Salvos</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px;">
+                <span style="width: 10px; height: 10px; border-radius: 2px; background-color: var(--success);"></span>
+                <span style="color: var(--text-secondary);">Clientes</span>
+            </div>
+        </div>
+    </div>
+
+    @if (Items == null || Items.Count == 0)
+    {
+        <div style="flex: 1; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 0.88rem; min-height: 220px;">
+            Nenhum dado registrado para exibir
+        </div>
+    }
+    else
+    {
+        <div style="flex: 1; display: flex; align-items: flex-end; gap: 16px; padding-top: 20px; min-height: 180px;">
+            @foreach (var item in Items)
+            {
+                var heightPercent = MaxValue > 0 ? (item.Value / MaxValue) * 85 : 0;
+                var secHeightPercent = MaxValue > 0 && item.SecondaryValue.HasValue ? (item.SecondaryValue.Value / MaxValue) * 85 : 0;
+
+                <div style="flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; justify-content: flex-end; gap: 8px;">
+                    <div style="display: flex; align-items: flex-end; gap: 6px; width: 100%; justify-content: center; height: 140px;">
+                        <!-- Barra Leads Salvos -->
+                        <div style="width: 18px; height: @Math.Max(heightPercent, 4)%; background: linear-gradient(180deg, #6366F1, #4F46E5); border-radius: 4px 4px 0 0; position: relative; transition: height 0.5s ease;"
+                             title="@item.Label - Salvos: @item.Value">
+                        </div>
+
+                        <!-- Barra Clientes -->
+                        <div style="width: 18px; height: @Math.Max(secHeightPercent, item.SecondaryValue > 0 ? 4 : 0)%; background: linear-gradient(180deg, #10B981, #059669); border-radius: 4px 4px 0 0; position: relative; transition: height 0.5s ease;"
+                             title="@item.Label - Clientes: @(item.SecondaryValue ?? 0)">
+                        </div>
+                    </div>
+                    <span style="font-size: 0.74rem; color: var(--text-muted); text-align: center; text-transform: uppercase;">@item.Label</span>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public string Title { get; set; } = "Evolução Mensal";
+    [Parameter] public List<ChartItemDto> Items { get; set; } = new();
+
+    private double MaxValue => Items?.Any() == true 
+        ? Math.Max(Items.Max(i => Math.Max(i.Value, i.SecondaryValue ?? 0)), 5) 
+        : 5;
+}

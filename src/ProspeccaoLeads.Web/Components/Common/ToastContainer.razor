@@ -1,0 +1,51 @@
+@using ProspeccaoLeads.Web.Services
+@inject ToastService ToastService
+@implements IDisposable
+
+<div class="toast-container">
+    @foreach (var toast in _toasts)
+    {
+        <div class="toast-item @toast.Type.ToString().ToLowerInvariant()" key="@toast.Id">
+            <div style="flex: 1;">
+                <div style="font-weight: 700; font-size: 0.92rem; margin-bottom: 2px;">@toast.Title</div>
+                <div style="font-size: 0.84rem; color: var(--text-secondary);">@toast.Message</div>
+            </div>
+            <button type="button" class="btn-icon" style="padding: 4px; background: transparent; border: none;" @onclick="() => RemoveToast(toast.Id)">
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+    }
+</div>
+
+@code {
+    private readonly List<ToastMessage> _toasts = new();
+
+    protected override void OnInitialized()
+    {
+        ToastService.OnShow += HandleShowToast;
+    }
+
+    private void HandleShowToast(ToastMessage toast)
+    {
+        _toasts.Add(toast);
+        InvokeAsync(StateHasChanged);
+
+        Task.Delay(toast.DurationMs).ContinueWith(_ =>
+        {
+            RemoveToast(toast.Id);
+        });
+    }
+
+    private void RemoveToast(Guid id)
+    {
+        _toasts.RemoveAll(t => t.Id == id);
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        ToastService.OnShow -= HandleShowToast;
+    }
+}

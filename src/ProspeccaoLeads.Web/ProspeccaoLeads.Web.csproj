@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <ProjectReference Include="..\ProspeccaoLeads.Domain\ProspeccaoLeads.Domain.csproj" />
+    <ProjectReference Include="..\ProspeccaoLeads.Application\ProspeccaoLeads.Application.csproj" />
+    <ProjectReference Include="..\ProspeccaoLeads.Infrastructure\ProspeccaoLeads.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
+  </PropertyGroup>
+
+</Project>

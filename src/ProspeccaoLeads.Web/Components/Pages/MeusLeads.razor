@@ -1,0 +1,476 @@
+@page "/leads"
+@using ProspeccaoLeads.Application.DTOs.Lead
+@using ProspeccaoLeads.Application.Interfaces
+@using ProspeccaoLeads.Domain.Enums
+@using ProspeccaoLeads.Web.Components.Common
+@using ProspeccaoLeads.Web.Components.Leads
+@using ProspeccaoLeads.Web.Services
+@inject ILeadService LeadService
+@inject IExportService ExportService
+@inject IAuthService AuthService
+@inject FileDownloadService FileService
+@inject ToastService ToastService
+@inject NavigationManager Navigation
+
+<div style="display: flex; flex-direction: column; gap: 24px;">
+
+    <!-- Top Header -->
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+        <div>
+            <h1 style="font-size: 1.5rem; font-weight: 800; color: var(--text-primary);">
+                Meus Leads Cadastrados
+            </h1>
+            <p style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 4px;">
+                Gerencie seus potenciais clientes, atualize status e registre o histórico de contatos.
+            </p>
+        </div>
+
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button type="button" class="btn-modern btn-secondary" @onclick="() => _exportModalOpen = true">
+                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                </svg>
+                Exportar
+            </button>
+            <a href="buscar" class="btn-modern btn-primary">
+                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                </svg>
+                Buscar Novos Leads
+            </a>
+        </div>
+    </div>
+
+    <!-- Filtros e Barra de Pesquisa -->
+    <div class="card-glass" style="padding: 20px;">
+        <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 12px; align-items: flex-end;">
+            
+            <!-- Pesquisa Textual -->
+            <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label" style="font-size: 0.8rem;">Buscar por nome, contato ou notas</label>
+                <div style="position: relative;">
+                    <input type="text" class="form-control-custom" placeholder="Digite e pressione Enter..." 
+                           @bind="_filter.Search" @bind:after="OnFilterChanged" @onkeydown="HandleSearchKeyDown" />
+                </div>
+            </div>
+
+            <!-- Filtro por Status -->
+            <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label" style="font-size: 0.8rem;">Status</label>
+                <select class="form-control-custom" @bind="_selectedStatusStr" @bind:after="HandleStatusFilterChange">
+                    <option value="">Todos os Status</option>
+                    @foreach (var s in Enum.GetValues<StatusLead>())
+                    {
+                        <option value="@s.ToString()">@s.ToString()</option>
+                    }
+                </select>
+            </div>
+
+            <!-- Filtro por Nicho -->
+            <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label" style="font-size: 0.8rem;">Nicho / Categoria</label>
+                <input type="text" class="form-control-custom" placeholder="Filtrar nicho..." 
+                       @bind="_filter.Niche" @bind:after="OnFilterChanged" />
+            </div>
+
+            <!-- Filtro por Cidade -->
+            <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label" style="font-size: 0.8rem;">Cidade</label>
+                <input type="text" class="form-control-custom" placeholder="Filtrar cidade..." 
+                       @bind="_filter.City" @bind:after="OnFilterChanged" />
+            </div>
+
+            <!-- Ordenação -->
+            <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label" style="font-size: 0.8rem;">Ordenar</label>
+                <select class="form-control-custom" @bind="_filter.SortBy" @bind:after="HandleSortChange">
+                    <option value="CreatedAt">Mais Recentes</option>
+                    <option value="Nome">Nome (A-Z)</option>
+                    <option value="Avaliacao">Melhor Avaliados</option>
+                    <option value="Status">Status</option>
+                    <option value="Cidade">Cidade (A-Z)</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabela de Leads -->
+    @if (_isLoading)
+    {
+        <div class="card-glass" style="text-align: center; padding: 60px;">
+            <div class="spinner" style="width: 38px; height: 38px; border-top-color: var(--primary); margin: 0 auto 12px;"></div>
+            <div style="color: var(--text-secondary); font-size: 0.9rem;">Carregando leads...</div>
+        </div>
+    }
+    else if (_pagedResult.Items.Count == 0)
+    {
+        <div class="card-glass" style="text-align: center; padding: 60px 20px;">
+            <div style="font-size: 2.2rem; margin-bottom: 12px;">📭</div>
+            <h3 style="font-size: 1.2rem; color: var(--text-primary);">Nenhum lead encontrado</h3>
+            <p style="color: var(--text-secondary); font-size: 0.88rem; max-width: 440px; margin: 6px auto 20px;">
+                Você ainda não possui leads salvos com esses filtros. Busque novas empresas para começar a prospectar!
+            </p>
+            <a href="buscar" class="btn-modern btn-primary">
+                Ir para a Pesquisa de Estabelecimentos
+            </a>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table-modern">
+                <thead>
+                    <tr>
+                        <th>Nome & Categoria</th>
+                        <th>Contato</th>
+                        <th>Localização</th>
+                        <th>Avaliação</th>
+                        <th>Status do Funil</th>
+                        <th>Cadastrado</th>
+                        <th style="text-align: right;">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var lead in _pagedResult.Items)
+                    {
+                        <tr>
+                            <td>
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <div style="width: 38px; height: 38px; border-radius: var(--radius-md); background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(139, 92, 246, 0.2)); display: flex; align-items: center; justify-content: center; color: var(--primary); font-weight: 700;">
+                                        @(string.IsNullOrWhiteSpace(lead.Nome) ? "L" : lead.Nome[0].ToString().ToUpper())
+                                    </div>
+                                    <div>
+                                        <div style="font-weight: 700; color: var(--text-primary); font-size: 0.95rem; cursor: pointer;" 
+                                             @onclick="() => AbrirDetalhes(lead)">
+                                            @lead.Nome
+                                        </div>
+                                        <div style="font-size: 0.78rem; color: var(--text-muted);">
+                                            @(lead.Categoria ?? "Sem categoria")
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div style="display: flex; flex-direction: column; gap: 3px;">
+                                    @if (!string.IsNullOrWhiteSpace(lead.Telefone))
+                                    {
+                                        <span style="font-size: 0.84rem; color: var(--text-secondary);">📞 @lead.Telefone</span>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(lead.Email))
+                                    {
+                                        <span style="font-size: 0.8rem; color: var(--text-muted);">✉️ @lead.Email</span>
+                                    }
+                                </div>
+                            </td>
+                            <td>
+                                <div style="font-size: 0.88rem; color: var(--text-primary);">@lead.Cidade - @lead.Estado</div>
+                                <div style="font-size: 0.76rem; color: var(--text-muted); max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">@lead.Endereco</div>
+                            </td>
+                            <td>
+                                @if (lead.Avaliacao.HasValue)
+                                {
+                                    <span class="rating-pill">⭐ @lead.Avaliacao.Value.ToString("0.0")</span>
+                                }
+                                else
+                                {
+                                    <span style="font-size: 0.8rem; color: var(--text-muted);">-</span>
+                                }
+                            </td>
+                            <td>
+                                <select class="form-control-custom" 
+                                        style="padding: 4px 8px; font-size: 0.8rem; height: 32px; width: auto; font-weight: 600;"
+                                        value="@lead.Status.ToString()"
+                                        @onchange="(e) => HandleInlineStatusChange(lead, e.Value?.ToString())">
+                                    @foreach (var s in Enum.GetValues<StatusLead>())
+                                    {
+                                        <option value="@s.ToString()">@s.ToString()</option>
+                                    }
+                                </select>
+                            </td>
+                            <td>
+                                <span style="font-size: 0.8rem; color: var(--text-muted);">@lead.CreatedAt.ToString("dd/MM/yy")</span>
+                            </td>
+                            <td style="text-align: right;">
+                                <div style="display: inline-flex; align-items: center; gap: 6px;">
+                                    @if (!string.IsNullOrWhiteSpace(lead.GetWhatsAppUrl()))
+                                    {
+                                        <a href="@lead.GetWhatsAppUrl()" target="_blank" class="btn-icon" title="Abrir WhatsApp" style="color: #25D366;">
+                                            <svg width="15" height="15" fill="currentColor" viewBox="0 0 24 24">
+                                                <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
+                                            </svg>
+                                        </a>
+                                    }
+
+                                    <button type="button" class="btn-icon" title="Ver Detalhes e Observações" @onclick="() => AbrirDetalhes(lead)">
+                                        <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                        </svg>
+                                    </button>
+
+                                    <button type="button" class="btn-icon" title="Excluir Lead" style="color: var(--danger);" @onclick="() => SolicitarExclusao(lead)">
+                                        <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Paginação -->
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 10px;">
+            <div style="font-size: 0.85rem; color: var(--text-muted);">
+                Exibindo <strong>@_pagedResult.Items.Count</strong> de <strong>@_pagedResult.TotalCount</strong> leads
+            </div>
+
+            <div style="display: flex; gap: 6px;">
+                <button type="button" class="btn-modern btn-secondary btn-sm" disabled="@(!_pagedResult.HasPreviousPage)" @onclick="PaginaAnteriorAsync">
+                    Anterior
+                </button>
+                <button type="button" class="btn-modern btn-secondary btn-sm" style="font-weight: 700;">
+                    Página @_pagedResult.Page de @Math.Max(_pagedResult.TotalPages, 1)
+                </button>
+                <button type="button" class="btn-modern btn-secondary btn-sm" disabled="@(!_pagedResult.HasNextPage)" @onclick="ProximaPaginaAsync">
+                    Próxima
+                </button>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Modal Detalhes do Lead -->
+<LeadModalDetalhes IsOpen="@_detalhesModalOpen"
+                   Lead="@_selectedLead"
+                   OnStatusChanged="HandleStatusUpdated"
+                   OnNotesSaved="HandleNotesSaved"
+                   OnClose="() => _detalhesModalOpen = false" />
+
+<!-- Modal Confirmação de Exclusão -->
+<ConfirmModal IsOpen="@_confirmModalOpen"
+              Title="Excluir Lead"
+              Message="@($"Deseja realmente remover '{_leadParaExcluir?.Nome}' dos seus leads?")"
+              ConfirmText="Excluir"
+              IsDanger="true"
+              OnResult="ConfirmarExclusaoAsync" />
+
+<!-- Modal de Exportação -->
+<ExportModal IsOpen="@_exportModalOpen"
+             TotalCount="@_pagedResult.TotalCount"
+             OnExport="HandleExportAsync"
+             OnClose="() => _exportModalOpen = false" />
+
+@code {
+    private readonly LeadFilterDto _filter = new() { PageSize = 15 };
+    private PagedResultDto<LeadDto> _pagedResult = new();
+    private bool _isLoading = true;
+    private Guid _userId;
+    private string _selectedStatusStr = "";
+
+    private bool _detalhesModalOpen = false;
+    private LeadDto? _selectedLead;
+
+    private bool _confirmModalOpen = false;
+    private LeadDto? _leadParaExcluir;
+
+    private bool _exportModalOpen = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var session = await AuthService.GetCurrentUserAsync();
+        if (session != null)
+        {
+            _userId = session.UserId;
+            await RecarregarLeadsAsync();
+        }
+    }
+
+    private readonly SemaphoreSlim _loadLock = new(1, 1);
+
+    private async Task RecarregarLeadsAsync()
+    {
+        await _loadLock.WaitAsync();
+        try
+        {
+            _isLoading = true;
+            _pagedResult = await LeadService.ObterPaginadoAsync(_userId, _filter);
+        }
+        catch
+        {
+            ToastService.ShowError("Erro ao carregar leads.");
+        }
+        finally
+        {
+            _isLoading = false;
+            _loadLock.Release();
+        }
+    }
+
+    private async Task HandleSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await OnFilterChanged();
+        }
+    }
+
+    private async Task OnFilterChanged()
+    {
+        _filter.Page = 1;
+        await RecarregarLeadsAsync();
+    }
+
+    private async Task HandleSortChange()
+    {
+        _filter.SortDescending = _filter.SortBy switch
+        {
+            "Nome" => false,
+            "Cidade" => false,
+            "Status" => false,
+            "Avaliacao" => true,
+            _ => true
+        };
+        _filter.Page = 1;
+        await RecarregarLeadsAsync();
+    }
+
+    private async Task HandleStatusFilterChange()
+    {
+        _filter.Page = 1;
+        if (Enum.TryParse<StatusLead>(_selectedStatusStr, out var status))
+        {
+            _filter.Status = status;
+        }
+        else
+        {
+            _filter.Status = null;
+        }
+        await RecarregarLeadsAsync();
+    }
+
+    private async Task HandleInlineStatusChange(LeadDto lead, string? statusStr)
+    {
+        if (Enum.TryParse<StatusLead>(statusStr, out var newStatus))
+        {
+            lead.Status = newStatus;
+            await LeadService.AtualizarStatusAsync(lead.Id, newStatus, _userId);
+            ToastService.ShowSuccess($"Status de '{lead.Nome}' atualizado para {newStatus}.");
+        }
+    }
+
+    private void AbrirDetalhes(LeadDto lead)
+    {
+        _selectedLead = lead;
+        _detalhesModalOpen = true;
+    }
+
+    private async Task HandleStatusUpdated(StatusLead newStatus)
+    {
+        if (_selectedLead != null)
+        {
+            await LeadService.AtualizarStatusAsync(_selectedLead.Id, newStatus, _userId);
+            await RecarregarLeadsAsync();
+        }
+    }
+
+    private async Task HandleNotesSaved(string notes)
+    {
+        if (_selectedLead != null)
+        {
+            _selectedLead.Observacoes = notes;
+            await LeadService.AtualizarObservacoesAsync(_selectedLead.Id, notes, _userId);
+        }
+    }
+
+    private void SolicitarExclusao(LeadDto lead)
+    {
+        _leadParaExcluir = lead;
+        _confirmModalOpen = true;
+    }
+
+    private async Task ConfirmarExclusaoAsync(bool confirmed)
+    {
+        _confirmModalOpen = false;
+        if (confirmed && _leadParaExcluir != null)
+        {
+            var res = await LeadService.ExcluirAsync(_leadParaExcluir.Id, _userId);
+            if (res.IsSuccess)
+            {
+                ToastService.ShowSuccess($"Lead '{_leadParaExcluir.Nome}' excluído com sucesso.");
+                await RecarregarLeadsAsync();
+            }
+            else
+            {
+                ToastService.ShowError(res.ErrorMessage ?? "Erro ao excluir lead.");
+            }
+        }
+        _leadParaExcluir = null;
+    }
+
+    private async Task PaginaAnteriorAsync()
+    {
+        if (_pagedResult.HasPreviousPage)
+        {
+            _filter.Page--;
+            await RecarregarLeadsAsync();
+        }
+    }
+
+    private async Task ProximaPaginaAsync()
+    {
+        if (_pagedResult.HasNextPage)
+        {
+            _filter.Page++;
+            await RecarregarLeadsAsync();
+        }
+    }
+
+    private async Task HandleExportAsync((string Format, string Scope) options)
+    {
+        var leads = await LeadService.ObterTodosAsync(_userId);
+
+        if (options.Scope == "filtrados")
+        {
+            leads = _pagedResult.Items.ToList();
+        }
+        else if (options.Scope == "clientes")
+        {
+            leads = leads.Where(l => l.Status == StatusLead.Cliente).ToList();
+        }
+        else if (options.Scope == "contatados")
+        {
+            leads = leads.Where(l => l.Status == StatusLead.Contatado || l.Status == StatusLead.EmNegociacao).ToList();
+        }
+
+        if (leads.Count == 0)
+        {
+            ToastService.ShowWarning("Nenhum lead para exportar.");
+            _exportModalOpen = false;
+            return;
+        }
+
+        byte[] bytes;
+        string fileName;
+        string contentType;
+
+        if (options.Format == "csv")
+        {
+            bytes = await ExportService.ExportarParaCsvAsync(leads);
+            fileName = $"meus_leads_{DateTime.UtcNow:yyyyMMdd_HHmm}.csv";
+            contentType = "text/csv;charset=utf-8";
+        }
+        else
+        {
+            bytes = await ExportService.ExportarParaExcelAsync(leads);
+            fileName = $"meus_leads_{DateTime.UtcNow:yyyyMMdd_HHmm}.xlsx";
+            contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+        }
+
+        await FileService.DownloadFileFromBytesAsync(fileName, bytes, contentType);
+        ToastService.ShowSuccess($"Arquivo {fileName} gerado com sucesso!");
+        _exportModalOpen = false;
+    }
+}

@@ -1,0 +1,42 @@
+@using Microsoft.AspNetCore.Components.Authorization
+@using ProspeccaoLeads.Web.Services
+@inject NavigationManager Navigation
+
+<header class="top-header">
+    <div style="display: flex; align-items: center; gap: 16px;">
+        <button type="button" class="btn-icon d-md-none" style="display: inline-flex;" @onclick="OnToggleSidebar">
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+            </svg>
+        </button>
+        <div>
+            <h2 style="font-size: 1.15rem; font-weight: 700; margin: 0; color: var(--text-primary);">
+                @Title
+            </h2>
+        </div>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 14px;">
+        <a href="buscar" class="btn-modern btn-primary btn-sm" style="display: inline-flex; align-items: center; gap: 6px;">
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+            <span>Nova Busca</span>
+        </a>
+
+        <div class="user-profile-badge" style="cursor: pointer;" @onclick='() => Navigation.NavigateTo("configuracoes")'>
+            <div class="user-avatar">
+                AD
+            </div>
+            <div style="display: flex; flex-direction: column;">
+                <span style="font-size: 0.85rem; font-weight: 700; color: var(--text-primary); line-height: 1.2;">Admin</span>
+                <span style="font-size: 0.72rem; color: var(--text-muted);">Prospecção Ativa</span>
+            </div>
+        </div>
+    </div>
+</header>
+
+@code {
+    [Parameter] public string Title { get; set; } = "Painel de Controle";
+    [Parameter] public EventCallback OnToggleSidebar { get; set; }
+}
