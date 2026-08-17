@@ -6,7 +6,7 @@ namespace ProspeccaoLeads.Infrastructure.ExternalApis.Providers;
 public class EnhancedFallbackProvider : IEstabelecimentoProvider
 {
     public string NomeProvedor => "Base Local Inteligente (ProspeccaoLeads Engine)";
-    public int Prioridade => 3; // Provedor de fallback resiliente
+    public int Prioridade => 4; // Provedor de fallback resiliente
 
     public Task<bool> DisponivelAsync(CancellationToken ct = default)
     {

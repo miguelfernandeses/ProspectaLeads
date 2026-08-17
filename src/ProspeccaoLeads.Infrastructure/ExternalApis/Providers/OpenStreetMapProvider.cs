@@ -13,7 +13,7 @@ public class OpenStreetMapProvider : IEstabelecimentoProvider
     private readonly ILogger<OpenStreetMapProvider> _logger;
 
     public string NomeProvedor => "OpenStreetMap / Overpass API";
-    public int Prioridade => 1;
+    public int Prioridade => 3;
 
     public OpenStreetMapProvider(HttpClient httpClient, ILogger<OpenStreetMapProvider> logger)
     {

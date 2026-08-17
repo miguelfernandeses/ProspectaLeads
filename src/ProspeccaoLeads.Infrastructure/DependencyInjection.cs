@@ -42,13 +42,15 @@ public static class DependencyInjection
         services.AddScoped<ISearchHistoryRepository, SearchHistoryRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
 
-        // 3. Provedores de Estabelecimentos
-        services.AddHttpClient<OpenStreetMapProvider>();
+        // 3. Provedores de Estabelecimentos (Prioridade: Real Places / Google Places / OSM / Fallback)
+        services.AddHttpClient<RealWebPlacesProvider>();
         services.AddHttpClient<GooglePlacesProvider>();
+        services.AddHttpClient<OpenStreetMapProvider>();
         services.AddHttpClient<SupabaseAuthService>();
 
-        services.AddScoped<IEstabelecimentoProvider, OpenStreetMapProvider>();
+        services.AddScoped<IEstabelecimentoProvider, RealWebPlacesProvider>();
         services.AddScoped<IEstabelecimentoProvider, GooglePlacesProvider>();
+        services.AddScoped<IEstabelecimentoProvider, OpenStreetMapProvider>();
         services.AddScoped<IEstabelecimentoProvider, EnhancedFallbackProvider>();
 
         // 4. Exportação & Autenticação
