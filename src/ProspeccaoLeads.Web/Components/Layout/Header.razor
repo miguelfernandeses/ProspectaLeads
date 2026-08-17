@@ -1,5 +1,7 @@
 @using Microsoft.AspNetCore.Components.Authorization
+@using ProspeccaoLeads.Application.Interfaces
 @using ProspeccaoLeads.Web.Services
+@inject IAuthService AuthService
 @inject NavigationManager Navigation
 
 <header class="top-header">
@@ -26,10 +28,10 @@
 
         <div class="user-profile-badge" style="cursor: pointer;" @onclick='() => Navigation.NavigateTo("configuracoes")'>
             <div class="user-avatar">
-                AD
+                @_userInitials
             </div>
             <div style="display: flex; flex-direction: column;">
-                <span style="font-size: 0.85rem; font-weight: 700; color: var(--text-primary); line-height: 1.2;">Admin</span>
+                <span style="font-size: 0.85rem; font-weight: 700; color: var(--text-primary); line-height: 1.2;">@_userName</span>
                 <span style="font-size: 0.72rem; color: var(--text-muted);">Prospecção Ativa</span>
             </div>
         </div>
@@ -39,4 +41,25 @@
 @code {
     [Parameter] public string Title { get; set; } = "Painel de Controle";
     [Parameter] public EventCallback OnToggleSidebar { get; set; }
+
+    private string _userName = "Minha Conta";
+    private string _userInitials = "MC";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var session = await AuthService.GetCurrentUserAsync();
+        if (session != null && !string.IsNullOrWhiteSpace(session.Name))
+        {
+            _userName = session.Name;
+            var parts = session.Name.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length == 1)
+            {
+                _userInitials = parts[0].Length >= 2 ? parts[0][..2].ToUpperInvariant() : parts[0][..1].ToUpperInvariant();
+            }
+            else if (parts.Length >= 2)
+            {
+                _userInitials = $"{char.ToUpperInvariant(parts[0][0])}{char.ToUpperInvariant(parts[^1][0])}";
+            }
+        }
+    }
 }

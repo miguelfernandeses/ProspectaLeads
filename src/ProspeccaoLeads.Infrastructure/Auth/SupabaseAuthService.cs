@@ -109,7 +109,7 @@ public class SupabaseAuthService : IAuthService
 
                     if (msg != null && msg.Contains("Email not confirmed", StringComparison.OrdinalIgnoreCase))
                     {
-                        return Result<UserSessionDto>.Failure("E-mail não confirmado. Verifique o link enviado ao seu e-mail ou desative a confirmação de e-mail no painel do Supabase (Authentication -> Providers -> Email).");
+                        return Result<UserSessionDto>.Failure("E-mail ainda não confirmado. Verifique o link de confirmação enviado à sua caixa de entrada.");
                     }
                     if (msg != null && (msg.Contains("Invalid login credentials", StringComparison.OrdinalIgnoreCase) || msg.Contains("invalid_grant", StringComparison.OrdinalIgnoreCase)))
                     {
@@ -233,14 +233,14 @@ public class SupabaseAuthService : IAuthService
 
                     if (msg != null && msg.Contains("User already registered", StringComparison.OrdinalIgnoreCase))
                     {
-                        return Result<UserSessionDto>.Failure("Este e-mail já está cadastrado no Supabase. Faça login ou solicite recuperação de senha.");
+                        return Result<UserSessionDto>.Failure("Este e-mail já está cadastrado. Faça login ou solicite a recuperação de senha.");
                     }
                     if (msg != null && (msg.Contains("rate limit", StringComparison.OrdinalIgnoreCase) || msg.Contains("over_email_send_rate_limit", StringComparison.OrdinalIgnoreCase)))
                     {
-                        return Result<UserSessionDto>.Failure("Limite de envio de e-mails do Supabase atingido. Para permitir cadastros imediatos, desative a opção 'Confirm email' no menu Authentication -> Providers -> Email do Supabase.");
+                        return Result<UserSessionDto>.Failure("Limite temporário de envio de e-mails atingido. Por favor, aguarde alguns minutos e tente novamente.");
                     }
 
-                    return Result<UserSessionDto>.Failure(msg ?? "Não foi possível criar a conta no Supabase.");
+                    return Result<UserSessionDto>.Failure(msg ?? "Não foi possível criar a conta no momento.");
                 }
             }
             catch (Exception ex)
@@ -426,8 +426,8 @@ public class SupabaseAuthService : IAuthService
                 else
                 {
                     var err = await response.Content.ReadAsStringAsync(ct);
-                    _logger.LogWarning("Falha ao alterar senha no Supabase: {Err}", err);
-                    return Result.Failure("Não foi possível atualizar a senha no Supabase.");
+                    _logger.LogWarning("Falha ao alterar senha: {Err}", err);
+                    return Result.Failure("Não foi possível atualizar a senha no momento.");
                 }
             }
             catch (Exception ex)
@@ -511,19 +511,6 @@ public class SupabaseAuthService : IAuthService
 
     public Task<UserSessionDto?> GetCurrentUserAsync(CancellationToken ct = default)
     {
-        // Se ainda não houver sessão ativa, inicializa sessão padrão para visualização imediata
-        if (_currentSession == null)
-        {
-            _currentSession = new UserSessionDto
-            {
-                UserId = Guid.Parse("11111111-1111-1111-1111-111111111111"),
-                Name = "Demonstração",
-                Email = "admin@prospeccaoleads.com",
-                AccessToken = "local-dev-token",
-                ExpiresAt = DateTime.UtcNow.AddDays(30)
-            };
-        }
-
         return Task.FromResult<UserSessionDto?>(_currentSession);
     }
 }

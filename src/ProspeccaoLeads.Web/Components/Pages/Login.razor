@@ -10,7 +10,7 @@
 
 <div class="card-glass" style="padding: 32px;">
     <h2 style="font-size: 1.35rem; margin-bottom: 8px; color: var(--text-primary);">Acessar Conta</h2>
-    <p style="color: var(--text-secondary); font-size: 0.88rem; margin-bottom: 24px;">Entre com suas credenciais do Supabase ou teste em modo demo.</p>
+    <p style="color: var(--text-secondary); font-size: 0.88rem; margin-bottom: 24px;">Digite seu e-mail e senha para acessar o painel de prospecção.</p>
 
     <EditForm Model="_model" FormName="loginForm" OnValidSubmit="HandleLogin">
         <DataAnnotationsValidator />
@@ -41,10 +41,6 @@
                 <span>Entrar no Sistema</span>
             }
         </button>
-
-        <button type="button" class="btn-modern btn-secondary" style="width: 100%; margin-top: 10px;" @onclick="HandleDemoLogin">
-            <span>⚡ Entrar com Conta Demonstração</span>
-        </button>
     </EditForm>
 
     <div style="text-align: center; margin-top: 24px; font-size: 0.88rem; color: var(--text-secondary);">
@@ -53,12 +49,7 @@
 </div>
 
 @code {
-    private readonly LoginDto _model = new()
-    {
-        Email = "admin@prospeccaoleads.com",
-        Password = "senha123"
-    };
-
+    private readonly LoginDto _model = new();
     private bool _isLoading = false;
 
     private async Task HandleLogin()
@@ -75,19 +66,12 @@
             }
             else
             {
-                ToastService.ShowError(result.ErrorMessage ?? "Falha na autenticação.");
+                ToastService.ShowError(result.ErrorMessage ?? "Falha na autenticação. Verifique seu e-mail e senha.");
             }
         }
         finally
         {
             _isLoading = false;
         }
-    }
-
-    private async Task HandleDemoLogin()
-    {
-        _model.Email = "admin@prospeccaoleads.com";
-        _model.Password = "senha123";
-        await HandleLogin();
     }
 }
