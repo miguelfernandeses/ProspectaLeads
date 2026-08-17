@@ -185,7 +185,14 @@
 
     private async Task CarregarDashboardAsync()
     {
-        _summary = await DashboardService.ObterResumoAsync(_userId);
+        try
+        {
+            _summary = await DashboardService.ObterResumoAsync(_userId);
+        }
+        catch
+        {
+            _summary = new DashboardSummaryDto();
+        }
     }
 
     private async Task HandleExport((string Format, string Scope) options)

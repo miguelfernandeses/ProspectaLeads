@@ -35,20 +35,25 @@ using (var scope = app.Services.CreateScope())
     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     try
     {
-        // Seed inicial de dados demonstrativos apenas em modo local SQLite
+        // Cria automaticamente as tabelas 'users', 'leads' e 'searches' no PostgreSQL/Supabase ou SQLite se não existirem
+        dbContext.Database.EnsureCreated();
+
+        var demoUserId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        if (!dbContext.Users.Any(u => u.Id == demoUserId))
+        {
+            dbContext.Users.Add(new UserProfile
+            {
+                Id = demoUserId,
+                Name = "Administrador",
+                Email = "admin@prospeccaoleads.com",
+                CreatedAt = DateTime.UtcNow
+            });
+            dbContext.SaveChanges();
+        }
+
+        // Seed inicial de dados demonstrativos apenas se o banco estiver vazio
         if (dbContext.Database.IsSqlite())
         {
-            var demoUserId = Guid.Parse("11111111-1111-1111-1111-111111111111");
-            if (!dbContext.Users.Any(u => u.Id == demoUserId))
-            {
-                dbContext.Users.Add(new UserProfile
-                {
-                    Id = demoUserId,
-                    Name = "Administrador",
-                    Email = "admin@prospeccaoleads.com",
-                    CreatedAt = DateTime.UtcNow
-                });
-            }
 
             if (!dbContext.Leads.Any(l => l.UserId == demoUserId))
             {
