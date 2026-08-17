@@ -19,9 +19,13 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 COPY --from=build /app/publish .
 
-# O Render e provedores em nuvem utilizam a porta 8080
-EXPOSE 8080
+# Variáveis essenciais para estabilidade no Linux/Render e prevenção de status 139
+ENV DOTNET_USE_POLLING_FILE_WATCHER=true
+ENV DOTNET_EnableDiagnostics=0
+ENV DOTNET_RUNNING_IN_CONTAINER=true
+ENV ASPNETCORE_ENVIRONMENT=Production
 ENV ASPNETCORE_URLS=http://+:8080
+EXPOSE 8080
 
 # Comando para iniciar a aplicação
 ENTRYPOINT ["dotnet", "ProspeccaoLeads.Web.dll"]

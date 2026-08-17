@@ -16,8 +16,13 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         // 1. Configuração do Banco de Dados (PostgreSQL Supabase ou SQLite local)
-        var connectionString = configuration.GetConnectionString("DefaultConnection");
-        var supabaseDbUrl = configuration["Supabase:DatabaseUrl"];
+        var connectionString = configuration.GetConnectionString("DefaultConnection") 
+            ?? configuration["DATABASE_URL"] 
+            ?? Environment.GetEnvironmentVariable("DATABASE_URL");
+
+        var supabaseDbUrl = configuration["Supabase:DatabaseUrl"] 
+            ?? configuration["SUPABASE_DB_URL"] 
+            ?? Environment.GetEnvironmentVariable("SUPABASE_DB_URL");
 
         var activeConnection = !string.IsNullOrWhiteSpace(connectionString) && !connectionString.Contains("SEU_BANCO")
             ? connectionString
