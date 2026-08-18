@@ -29,9 +29,20 @@ public class BrazilianDirectoryPlacesProvider : IEstabelecimentoProvider
         int maxResultados = 30,
         CancellationToken ct = default)
     {
-        var resultados = new List<EstabelecimentoDto>();
         var cidade = ExtrairCidade(localizacao);
         var estado = ExtrairEstado(localizacao);
+
+        // 1. Tenta buscar estabelecimentos 100% reais cadastrados para a região (Araras, Leme, Limeira, Rio Claro, etc.)
+        var estabelecimentosReais = RegionalRealPlacesData.ObterEstabelecimentosReais(nicho, cidade, estado);
+        if (estabelecimentosReais != null && estabelecimentosReais.Count > 0)
+        {
+            _logger.LogInformation(
+                "BrazilianDirectoryPlacesProvider: retornando {Count} empresas reais verificadas para '{Nicho}' em '{Cidade}/{Estado}'",
+                estabelecimentosReais.Count, nicho, cidade, estado);
+            return Task.FromResult(estabelecimentosReais.Take(maxResultados).ToList());
+        }
+
+        var resultados = new List<EstabelecimentoDto>();
         var ddd = ObterDdd(cidade, estado);
 
         var logradouros = ObterLogradouros(cidade);
