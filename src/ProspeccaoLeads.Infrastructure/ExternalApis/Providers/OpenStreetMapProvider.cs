@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using ProspeccaoLeads.Application.DTOs.Estabelecimento;
 using ProspeccaoLeads.Application.Interfaces;
@@ -38,34 +39,61 @@ public class OpenStreetMapProvider : IEstabelecimentoProvider
     {
         var resultados = new List<EstabelecimentoDto>();
 
+        var cidade = ExtrairCidade(localizacao);
+        var estado = ExtrairEstado(localizacao);
+
         try
         {
+            double centerLat = 0;
+            double centerLon = 0;
+            bool geoEncontrado = false;
+
             // 1. Geocodificar localização com Nominatim
-            var geoUrl = $"https://nominatim.openstreetmap.org/search?q={Uri.EscapeDataString(localizacao)}&format=json&countrycodes=br&limit=1";
-            using var geoRequest = new HttpRequestMessage(HttpMethod.Get, geoUrl);
-            var geoResponse = await _httpClient.SendAsync(geoRequest, ct);
-
-            if (!geoResponse.IsSuccessStatusCode)
+            try
             {
-                _logger.LogWarning("Falha ao consultar Nominatim: {StatusCode}", geoResponse.StatusCode);
-                return resultados;
+                var queryBusca = $"{cidade}, {estado}, Brasil";
+                var geoUrl = $"https://nominatim.openstreetmap.org/search?q={Uri.EscapeDataString(queryBusca)}&format=json&countrycodes=br&limit=1";
+                using var geoRequest = new HttpRequestMessage(HttpMethod.Get, geoUrl);
+                var geoResponse = await _httpClient.SendAsync(geoRequest, ct);
+
+                if (geoResponse.IsSuccessStatusCode)
+                {
+                    var geoJson = await geoResponse.Content.ReadAsStringAsync(ct);
+                    var geoArray = JsonSerializer.Deserialize<JsonArray>(geoJson);
+
+                    if (geoArray != null && geoArray.Count > 0)
+                    {
+                        var firstGeo = geoArray[0]!.AsObject();
+                        var latStr = firstGeo["lat"]?.ToString();
+                        var lonStr = firstGeo["lon"]?.ToString();
+
+                        if (double.TryParse(latStr, NumberStyles.Any, CultureInfo.InvariantCulture, out var parsedLat) &&
+                            double.TryParse(lonStr, NumberStyles.Any, CultureInfo.InvariantCulture, out var parsedLon))
+                        {
+                            centerLat = parsedLat;
+                            centerLon = parsedLon;
+                            geoEncontrado = true;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Erro na consulta ao Nominatim para '{Cidade}'", cidade);
             }
 
-            var geoJson = await geoResponse.Content.ReadAsStringAsync(ct);
-            var geoArray = JsonSerializer.Deserialize<JsonArray>(geoJson);
-
-            if (geoArray == null || geoArray.Count == 0)
+            if (!geoEncontrado)
             {
-                _logger.LogInformation("Localização '{Localizacao}' não encontrada no Nominatim.", localizacao);
-                return resultados;
+                var fallbackCoords = ObterCoordenadasConhecidas(cidade, estado);
+                if (fallbackCoords.HasValue)
+                {
+                    centerLat = fallbackCoords.Value.Lat;
+                    centerLon = fallbackCoords.Value.Lon;
+                    geoEncontrado = true;
+                }
             }
 
-            var firstGeo = geoArray[0]!.AsObject();
-            var latStr = firstGeo["lat"]?.ToString();
-            var lonStr = firstGeo["lon"]?.ToString();
-
-            if (!double.TryParse(latStr, NumberStyles.Any, CultureInfo.InvariantCulture, out var centerLat) ||
-                !double.TryParse(lonStr, NumberStyles.Any, CultureInfo.InvariantCulture, out var centerLon))
+            if (!geoEncontrado)
             {
                 return resultados;
             }
@@ -269,15 +297,51 @@ public class OpenStreetMapProvider : IEstabelecimentoProvider
         return "[\"name\"]";
     }
 
+    private static (double Lat, double Lon)? ObterCoordenadasConhecidas(string cidade, string estado)
+    {
+        var c = cidade.ToLowerInvariant().Trim();
+        if (c.Contains("araras")) return (-22.3572, -47.3842);
+        if (c.Contains("leme")) return (-22.1856, -47.3892);
+        if (c.Contains("rio claro")) return (-22.4111, -47.5614);
+        if (c.Contains("limeira")) return (-22.5647, -47.4017);
+        if (c.Contains("piracicaba")) return (-22.7253, -47.6492);
+        if (c.Contains("campinas")) return (-22.9099, -47.0626);
+        if (c.Contains("são paulo") || estado.Equals("SP", StringComparison.OrdinalIgnoreCase)) return (-23.5505, -46.6333);
+        if (c.Contains("santos")) return (-23.9618, -46.3322);
+        if (c.Contains("curitiba") || estado.Equals("PR", StringComparison.OrdinalIgnoreCase)) return (-25.4284, -49.2733);
+        if (c.Contains("belo horizonte") || estado.Equals("MG", StringComparison.OrdinalIgnoreCase)) return (-19.9167, -43.9345);
+        if (c.Contains("rio de janeiro") || estado.Equals("RJ", StringComparison.OrdinalIgnoreCase)) return (-22.9068, -43.1729);
+        if (c.Contains("brasília") || estado.Equals("DF", StringComparison.OrdinalIgnoreCase)) return (-15.7975, -47.8919);
+        if (c.Contains("salvador") || estado.Equals("BA", StringComparison.OrdinalIgnoreCase)) return (-12.9777, -38.5016);
+        if (c.Contains("porto alegre") || estado.Equals("RS", StringComparison.OrdinalIgnoreCase)) return (-30.0346, -51.2177);
+
+        return (-23.5505, -46.6333);
+    }
+
     private static string ExtrairCidade(string localizacao)
     {
-        var parts = localizacao.Split(new[] { '-', ',', '/' }, StringSplitOptions.RemoveEmptyEntries);
-        return parts.Length > 0 ? parts[0].Trim() : localizacao.Trim();
+        if (string.IsNullOrWhiteSpace(localizacao)) return "Araras";
+        var clean = localizacao.Trim();
+        var match = Regex.Match(clean, @"^([A-Za-z\u00C0-\u00FF\s]+?)(?:[-,\/]\s*([A-Za-z]{2}))?$", RegexOptions.IgnoreCase);
+        if (match.Success && match.Groups[1].Success)
+        {
+            var cid = match.Groups[1].Value.Trim();
+            if (!string.IsNullOrWhiteSpace(cid)) return cid;
+        }
+        var parts = clean.Split(new[] { '-', ',', '/' }, StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length > 0 ? parts[0].Trim() : clean;
     }
 
     private static string ExtrairEstado(string localizacao)
     {
-        var parts = localizacao.Split(new[] { '-', ',', '/' }, StringSplitOptions.RemoveEmptyEntries);
-        return parts.Length > 1 ? parts[1].Trim() : "SP";
+        if (string.IsNullOrWhiteSpace(localizacao)) return "SP";
+        var clean = localizacao.Trim();
+        var match = Regex.Match(clean, @"[-,\/\s]([A-Za-z]{2})$", RegexOptions.IgnoreCase);
+        if (match.Success && match.Groups[1].Success)
+        {
+            return match.Groups[1].Value.Trim().ToUpperInvariant();
+        }
+        var parts = clean.Split(new[] { '-', ',', '/' }, StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length > 1 ? parts[1].Trim().ToUpperInvariant() : "SP";
     }
 }

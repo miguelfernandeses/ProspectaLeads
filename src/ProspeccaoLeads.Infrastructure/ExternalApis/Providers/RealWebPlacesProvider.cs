@@ -44,22 +44,21 @@ public class RealWebPlacesProvider : IEstabelecimentoProvider
         {
             var queries = new List<string>
             {
-                $"{nicho} em {cidade} {estado} telefone whatsapp",
-                $"{nicho} {cidade} {estado} contato endereco",
+                $"{nicho} {cidade} {estado} telefone whatsapp",
+                $"{nicho} em {cidade} {estado} contato endereco",
                 $"site:instagram.com {nicho} {cidade}",
-                $"site:facebook.com {nicho} {cidade} {estado}",
-                $"lojas {nicho} {cidade} {estado} avaliacoes"
+                $"{nicho} {cidade} {estado} avaliacoes"
             };
 
             var nomesVistos = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            // Dispara todas as 5 buscas concorrentemente em paralelo
+            // Dispara as buscas com timeout resiliente de 10s
             var tasks = queries.Select(async q =>
             {
                 try
                 {
                     using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                    cts.CancelAfter(TimeSpan.FromSeconds(3.5));
+                    cts.CancelAfter(TimeSpan.FromSeconds(10));
                     return await ExecutarBuscaAsync(q, nicho, cidade, estado, cts.Token);
                 }
                 catch
@@ -101,23 +100,55 @@ public class RealWebPlacesProvider : IEstabelecimentoProvider
     {
         var lista = new List<EstabelecimentoDto>();
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, "https://html.duckduckgo.com/html/");
-        request.Content = new FormUrlEncodedContent(new[]
+        try
         {
-            new KeyValuePair<string, string>("q", query),
-            new KeyValuePair<string, string>("kl", "br-pt")
-        });
+            using var request = new HttpRequestMessage(HttpMethod.Post, "https://html.duckduckgo.com/html/");
+            request.Content = new FormUrlEncodedContent(new[]
+            {
+                new KeyValuePair<string, string>("q", query),
+                new KeyValuePair<string, string>("kl", "br-pt")
+            });
 
-        using var response = await _httpClient.SendAsync(request, ct);
-        if (!response.IsSuccessStatusCode)
+            using var response = await _httpClient.SendAsync(request, ct);
+            if (response.IsSuccessStatusCode)
+            {
+                var html = await response.Content.ReadAsStringAsync(ct);
+                ParseHtmlResults(html, lista, nicho, cidade, estado);
+            }
+
+            if (lista.Count == 0)
+            {
+                // Fallback para DuckDuckGo Lite se o HTML padrão vier vazio
+                using var liteReq = new HttpRequestMessage(HttpMethod.Post, "https://lite.duckduckgo.com/lite/");
+                liteReq.Content = new FormUrlEncodedContent(new[]
+                {
+                    new KeyValuePair<string, string>("q", query),
+                    new KeyValuePair<string, string>("kl", "br-pt")
+                });
+                using var liteResp = await _httpClient.SendAsync(liteReq, ct);
+                if (liteResp.IsSuccessStatusCode)
+                {
+                    var liteHtml = await liteResp.Content.ReadAsStringAsync(ct);
+                    ParseHtmlResults(liteHtml, lista, nicho, cidade, estado);
+                }
+            }
+        }
+        catch (Exception ex)
         {
-            return lista;
+            _logger.LogWarning(ex, "Falha na requisição de busca web para '{Query}'", query);
         }
 
-        var html = await response.Content.ReadAsStringAsync(ct);
+        return lista;
+    }
 
-        // Regex para capturar os blocos de resultados do DuckDuckGo HTML
+    private static void ParseHtmlResults(string html, List<EstabelecimentoDto> lista, string nicho, string cidade, string estado)
+    {
         var blockMatches = Regex.Matches(html, @"<h2 class=""result__title"">\s*<a class=""result__url""[^>]*href=""(?<url>[^""]+)""[^>]*>(?<title>.*?)</a>.*?<a class=""result__snippet""[^>]*>(?<snippet>.*?)</a>", RegexOptions.Singleline);
+
+        if (blockMatches.Count == 0)
+        {
+            blockMatches = Regex.Matches(html, @"<a class=""result-link""[^>]*href=""(?<url>[^""]+)""[^>]*>(?<title>.*?)</a>.*?<td class=""result-snippet""[^>]*>(?<snippet>.*?)</td>", RegexOptions.Singleline);
+        }
 
         if (blockMatches.Count == 0)
         {
@@ -166,8 +197,6 @@ public class RealWebPlacesProvider : IEstabelecimentoProvider
                 Observacoes = $"Estabelecimento real indexado em {cidade}/{estado}. Encontrado via busca comercial local."
             });
         }
-
-        return lista;
     }
 
     private static string ExtrairNomeEmpresa(string title, string snippet, string url, string nicho, string cidade)
@@ -366,13 +395,28 @@ public class RealWebPlacesProvider : IEstabelecimentoProvider
 
     private static string ExtrairCidade(string localizacao)
     {
-        var parts = localizacao.Split(new[] { '-', ',', '/' }, StringSplitOptions.RemoveEmptyEntries);
-        return parts.Length > 0 ? parts[0].Trim() : localizacao.Trim();
+        if (string.IsNullOrWhiteSpace(localizacao)) return "Araras";
+        var clean = localizacao.Trim();
+        var match = Regex.Match(clean, @"^([A-Za-z\u00C0-\u00FF\s]+?)(?:[-,\/]\s*([A-Za-z]{2}))?$", RegexOptions.IgnoreCase);
+        if (match.Success && match.Groups[1].Success)
+        {
+            var cid = match.Groups[1].Value.Trim();
+            if (!string.IsNullOrWhiteSpace(cid)) return cid;
+        }
+        var parts = clean.Split(new[] { '-', ',', '/' }, StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length > 0 ? parts[0].Trim() : clean;
     }
 
     private static string ExtrairEstado(string localizacao)
     {
-        var parts = localizacao.Split(new[] { '-', ',', '/' }, StringSplitOptions.RemoveEmptyEntries);
+        if (string.IsNullOrWhiteSpace(localizacao)) return "SP";
+        var clean = localizacao.Trim();
+        var match = Regex.Match(clean, @"[-,\/\s]([A-Za-z]{2})$", RegexOptions.IgnoreCase);
+        if (match.Success && match.Groups[1].Success)
+        {
+            return match.Groups[1].Value.Trim().ToUpperInvariant();
+        }
+        var parts = clean.Split(new[] { '-', ',', '/' }, StringSplitOptions.RemoveEmptyEntries);
         return parts.Length > 1 ? parts[1].Trim().ToUpperInvariant() : "SP";
     }
 }
