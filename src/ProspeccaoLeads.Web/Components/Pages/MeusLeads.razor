@@ -49,15 +49,15 @@
             <div class="form-group" style="margin-bottom: 0;">
                 <label class="form-label" style="font-size: 0.8rem;">Buscar por nome, contato ou notas</label>
                 <div style="position: relative;">
-                    <input type="text" class="form-control-custom" placeholder="Digite e pressione Enter..." 
-                           @bind="_filter.Search" @bind:after="OnFilterChanged" @onkeydown="HandleSearchKeyDown" />
+                    <input type="text" class="form-control-custom" placeholder="Digite palavras-chave..." 
+                           @bind="_filter.Search" @onkeydown="HandleKeyDown" />
                 </div>
             </div>
 
             <!-- Filtro por Status -->
             <div class="form-group" style="margin-bottom: 0;">
                 <label class="form-label" style="font-size: 0.8rem;">Status</label>
-                <select class="form-control-custom" @bind="_selectedStatusStr" @bind:after="HandleStatusFilterChange">
+                <select class="form-control-custom" @bind="_selectedStatusStr">
                     <option value="">Todos os Status</option>
                     @foreach (var s in Enum.GetValues<StatusLead>())
                     {
@@ -69,27 +69,44 @@
             <!-- Filtro por Nicho -->
             <div class="form-group" style="margin-bottom: 0;">
                 <label class="form-label" style="font-size: 0.8rem;">Nicho / Categoria</label>
-                <input type="text" class="form-control-custom" placeholder="Filtrar nicho..." 
-                       @bind="_filter.Niche" @bind:after="OnFilterChanged" />
+                <input type="text" class="form-control-custom" placeholder="Ex.: Roupas, Clínicas..." 
+                       @bind="_filter.Niche" @onkeydown="HandleKeyDown" />
             </div>
 
             <!-- Filtro por Cidade -->
             <div class="form-group" style="margin-bottom: 0;">
                 <label class="form-label" style="font-size: 0.8rem;">Cidade</label>
-                <input type="text" class="form-control-custom" placeholder="Filtrar cidade..." 
-                       @bind="_filter.City" @bind:after="OnFilterChanged" />
+                <input type="text" class="form-control-custom" placeholder="Ex.: Araras, Campinas..." 
+                       @bind="_filter.City" @onkeydown="HandleKeyDown" />
             </div>
 
             <!-- Ordenação -->
             <div class="form-group" style="margin-bottom: 0;">
                 <label class="form-label" style="font-size: 0.8rem;">Ordenar</label>
-                <select class="form-control-custom" @bind="_filter.SortBy" @bind:after="HandleSortChange">
+                <select class="form-control-custom" @bind="_filter.SortBy" @bind:after="ExecutarFiltroAsync">
                     <option value="CreatedAt">Mais Recentes</option>
                     <option value="Nome">Nome (A-Z)</option>
                     <option value="Avaliacao">Melhor Avaliados</option>
                     <option value="Status">Status</option>
                     <option value="Cidade">Cidade (A-Z)</option>
                 </select>
+            </div>
+
+            <!-- Botões de Ação do Filtro -->
+            <div style="display: flex; gap: 8px; align-items: flex-end;">
+                <button type="button" class="btn-modern btn-primary" style="height: 42px; padding: 0 20px; display: inline-flex; align-items: center; gap: 6px; font-weight: 700;" @onclick="ExecutarFiltroAsync">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
+                    </svg>
+                    <span>Filtrar</span>
+                </button>
+
+                <button type="button" class="btn-modern btn-secondary" style="height: 42px; padding: 0 14px; display: inline-flex; align-items: center; gap: 4px;" title="Limpar Filtros" @onclick="LimparFiltrosAsync">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                    <span>Limpar</span>
+                </button>
             </div>
         </div>
     </div>
@@ -385,22 +402,17 @@
         }
     }
 
-    private async Task HandleSearchKeyDown(KeyboardEventArgs e)
+    private async Task HandleKeyDown(KeyboardEventArgs e)
     {
         if (e.Key == "Enter")
         {
-            await OnFilterChanged();
+            await ExecutarFiltroAsync();
         }
     }
 
-    private async Task OnFilterChanged()
+    private async Task ExecutarFiltroAsync()
     {
         _filter.Page = 1;
-        await RecarregarLeadsAsync();
-    }
-
-    private async Task HandleSortChange()
-    {
         _filter.SortDescending = _filter.SortBy switch
         {
             "Nome" => false,
@@ -409,13 +421,7 @@
             "Avaliacao" => true,
             _ => true
         };
-        _filter.Page = 1;
-        await RecarregarLeadsAsync();
-    }
 
-    private async Task HandleStatusFilterChange()
-    {
-        _filter.Page = 1;
         if (Enum.TryParse<StatusLead>(_selectedStatusStr, out var status))
         {
             _filter.Status = status;
@@ -424,6 +430,20 @@
         {
             _filter.Status = null;
         }
+
+        await RecarregarLeadsAsync();
+    }
+
+    private async Task LimparFiltrosAsync()
+    {
+        _filter.Search = null;
+        _filter.Niche = null;
+        _filter.City = null;
+        _filter.Status = null;
+        _filter.SortBy = "CreatedAt";
+        _filter.SortDescending = true;
+        _selectedStatusStr = "";
+        _filter.Page = 1;
         await RecarregarLeadsAsync();
     }
 

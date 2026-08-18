@@ -47,7 +47,7 @@ public static class DependencyInjection
         services.AddScoped<ISearchHistoryRepository, SearchHistoryRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
 
-        // 3. Provedores de Estabelecimentos (Prioridade: Real Places / Google Places / OSM / Fallback)
+        // 3. Provedores de Estabelecimentos Reais (Prioridade: Real Places / Google Places / OSM)
         services.AddHttpClient<RealWebPlacesProvider>();
         services.AddHttpClient<GooglePlacesProvider>();
         services.AddHttpClient<OpenStreetMapProvider>();
@@ -56,7 +56,6 @@ public static class DependencyInjection
         services.AddScoped<IEstabelecimentoProvider, RealWebPlacesProvider>();
         services.AddScoped<IEstabelecimentoProvider, GooglePlacesProvider>();
         services.AddScoped<IEstabelecimentoProvider, OpenStreetMapProvider>();
-        services.AddScoped<IEstabelecimentoProvider, EnhancedFallbackProvider>();
 
         // 4. Exportação & Autenticação
         services.AddScoped<IExportService, ExportService>();
