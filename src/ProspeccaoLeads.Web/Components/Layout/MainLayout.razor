@@ -1,8 +1,13 @@
 @inherits LayoutComponentBase
+@implements IDisposable
 @using ProspeccaoLeads.Web.Components.Common
+@inject NavigationManager Navigation
 
 <div class="app-container">
-    <NavMenu IsOpen="_sidebarOpen" />
+    <!-- Backdrop de fechar menu no celular -->
+    <div class="sidebar-backdrop @(_sidebarOpen ? "active" : "")" @onclick="CloseSidebar"></div>
+
+    <NavMenu IsOpen="_sidebarOpen" OnClose="CloseSidebar" />
     
     <div class="main-wrapper">
         <Header OnToggleSidebar="ToggleSidebar" />
@@ -17,8 +22,29 @@
 @code {
     private bool _sidebarOpen = false;
 
+    protected override void OnInitialized()
+    {
+        Navigation.LocationChanged += OnLocationChanged;
+    }
+
     private void ToggleSidebar()
     {
         _sidebarOpen = !_sidebarOpen;
+    }
+
+    private void CloseSidebar()
+    {
+        _sidebarOpen = false;
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        _sidebarOpen = false;
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        Navigation.LocationChanged -= OnLocationChanged;
     }
 }

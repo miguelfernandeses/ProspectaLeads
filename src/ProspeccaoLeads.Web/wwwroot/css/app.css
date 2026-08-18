@@ -722,21 +722,271 @@ h1, h2, h3, h4, h5, h6 {
     to { transform: rotate(360deg); }
 }
 
-/* Responsive adjustments */
+/* Backdrop para fechar menu no mobile */
+.sidebar-backdrop {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 95;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+}
+
+.sidebar-backdrop.active {
+    display: block;
+    opacity: 1;
+}
+
+/* Grids e Elementos Responsivos */
+.search-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 16px;
+    align-items: flex-end;
+}
+
+.leads-filter-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr auto;
+    gap: 12px;
+    align-items: flex-end;
+}
+
+.dashboard-banner {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(16, 185, 129, 0.05)), var(--bg-surface);
+    padding: 28px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+/* ==========================================================================
+   BREAKPOINTS RESPONSIVOS
+   ========================================================================== */
+
+/* Tablets e Telas Médias (<= 1024px) */
+@media (max-width: 1024px) {
+    .leads-filter-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+    
+    .charts-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+}
+
+/* Dispositivos Móveis / Celulares (<= 768px) */
 @media (max-width: 768px) {
     .sidebar {
         transform: translateX(-100%);
+        width: 280px;
+        z-index: 1000;
+        box-shadow: 4px 0 25px rgba(0, 0, 0, 0.5);
     }
+    
     .sidebar.open {
         transform: translateX(0);
     }
+    
     .main-wrapper {
         margin-left: 0;
+        width: 100%;
     }
-    .page-content {
-        padding: 16px;
-    }
+    
     .top-header {
-        padding: 0 16px;
+        padding: 0 12px;
+        height: 60px;
+    }
+    
+    .page-content {
+        padding: 14px 12px;
+    }
+
+    .card-glass {
+        padding: 16px;
+        border-radius: var(--radius-md);
+    }
+
+    /* Banner do Dashboard */
+    .dashboard-banner {
+        padding: 16px;
+        border-radius: var(--radius-md);
+        gap: 14px;
+    }
+
+    .dashboard-banner h1 {
+        font-size: 1.3rem !important;
+    }
+
+    .dashboard-banner > div:last-child {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .dashboard-banner > div:last-child .btn-modern {
+        width: 100%;
+        justify-content: center;
+    }
+
+    /* Grade de KPIs em 2 colunas no celular */
+    .kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+    .kpi-card {
+        padding: 14px 12px;
+    }
+
+    .kpi-title {
+        font-size: 0.72rem;
+    }
+
+    .kpi-value {
+        font-size: 1.45rem;
+    }
+
+    .kpi-icon {
+        width: 32px;
+        height: 32px;
+    }
+
+    .kpi-icon svg {
+        width: 16px;
+        height: 16px;
+    }
+
+    .kpi-footer {
+        font-size: 0.72rem;
+    }
+
+    /* Formulário de Busca */
+    .search-form-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .search-form-grid button[type="submit"] {
+        width: 100%;
+        height: 46px;
+        justify-content: center;
+    }
+
+    /* Filtro de Leads */
+    .leads-filter-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    /* Modal no celular */
+    .modal-dialog-custom {
+        width: 95vw;
+        max-width: 95vw;
+        max-height: 90vh;
+        margin: 10px auto;
+        border-radius: var(--radius-md);
+    }
+
+    .modal-header-custom {
+        padding: 14px 16px;
+    }
+
+    .modal-header-custom h3 {
+        font-size: 1.1rem !important;
+    }
+
+    .modal-body-custom {
+        padding: 14px;
+        gap: 14px !important;
+    }
+
+    .modal-footer-custom {
+        padding: 12px 14px;
+        flex-direction: column-reverse;
+        gap: 8px;
+    }
+
+    .modal-footer-custom .btn-modern {
+        width: 100%;
+        justify-content: center;
+    }
+
+    /* Tabela Responsiva com Scroll Macio */
+    .table-responsive {
+        -webkit-overflow-scrolling: touch;
+        border-radius: var(--radius-md);
+        margin: 0 -4px;
+    }
+
+    .table-modern th, 
+    .table-modern td {
+        padding: 10px 12px;
+        font-size: 0.84rem;
+    }
+
+    /* Toasts no mobile */
+    .toast-container {
+        bottom: 12px;
+        right: 12px;
+        left: 12px;
+    }
+
+    .toast-item {
+        min-width: 0;
+        width: 100%;
+        max-width: 100%;
+        padding: 12px;
+        font-size: 0.85rem;
+    }
+}
+
+/* Celulares Pequenos (<= 480px) */
+@media (max-width: 480px) {
+    .top-header .brand-title {
+        font-size: 0.95rem;
+    }
+
+    .user-profile-badge {
+        padding: 6px 8px;
+        gap: 8px;
+    }
+
+    .user-profile-badge span:last-child {
+        display: none;
+    }
+
+    .kpi-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+
+    .kpi-card {
+        padding: 12px 10px;
+    }
+
+    .kpi-value {
+        font-size: 1.3rem;
+    }
+
+    .chips-container {
+        gap: 6px;
+    }
+
+    .chip-btn {
+        padding: 5px 10px;
+        font-size: 0.76rem;
     }
 }
