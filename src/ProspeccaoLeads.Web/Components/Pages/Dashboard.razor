@@ -176,11 +176,14 @@
     protected override async Task OnInitializedAsync()
     {
         var session = await AuthService.GetCurrentUserAsync();
-        if (session != null)
+        if (session == null)
         {
-            _userId = session.UserId;
-            await CarregarDashboardAsync();
+            Navigation.NavigateTo("login");
+            return;
         }
+
+        _userId = session.UserId;
+        await CarregarDashboardAsync();
     }
 
     private async Task CarregarDashboardAsync()

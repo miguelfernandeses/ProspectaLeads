@@ -241,10 +241,13 @@
     protected override async Task OnInitializedAsync()
     {
         _session = await AuthService.GetCurrentUserAsync();
-        if (_session != null)
+        if (_session == null)
         {
-            _profileModel.Name = _session.Name;
+            Navigation.NavigateTo("login");
+            return;
         }
+
+        _profileModel.Name = _session.Name;
     }
 
     private string ObterIniciais(string? nome)

@@ -1,7 +1,9 @@
 @inherits LayoutComponentBase
 @implements IDisposable
+@using ProspeccaoLeads.Application.Interfaces
 @using ProspeccaoLeads.Web.Components.Common
 @inject NavigationManager Navigation
+@inject IAuthService AuthService
 
 <div class="app-container">
     <!-- Backdrop de fechar menu no celular -->
@@ -22,9 +24,14 @@
 @code {
     private bool _sidebarOpen = false;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         Navigation.LocationChanged += OnLocationChanged;
+        var session = await AuthService.GetCurrentUserAsync();
+        if (session == null)
+        {
+            Navigation.NavigateTo("login");
+        }
     }
 
     private void ToggleSidebar()
