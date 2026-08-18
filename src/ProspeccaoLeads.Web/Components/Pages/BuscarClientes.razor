@@ -31,18 +31,114 @@
             <DataAnnotationsValidator />
 
             <div class="search-form-grid">
-                <!-- Nicho -->
+                <!-- Nicho: Dropdown de categorias -->
                 <div class="form-group" style="margin-bottom: 0;">
-                    <label class="form-label">Nicho ou Ramo de Negócio</label>
-                    <InputText class="form-control-custom" placeholder="Ex.: Clínicas odontológicas, Restaurantes, Academias..." @bind-Value="_buscaDto.Nicho" />
+                    <label class="form-label">Categoria / Ramo de Negócio</label>
+                    <select class="form-control-custom" @bind="_buscaDto.Nicho" style="cursor: pointer;">
+                        <option value="">-- Selecione uma categoria --</option>
+                        <optgroup label="🦷 Saúde">
+                            <option value="Clínicas odontológicas">Clínicas odontológicas</option>
+                            <option value="Consultórios médicos">Consultórios médicos</option>
+                            <option value="Clínicas médicas">Clínicas médicas</option>
+                            <option value="Psicólogos e terapeutas">Psicólogos e terapeutas</option>
+                            <option value="Fisioterapeutas">Fisioterapeutas</option>
+                            <option value="Nutricionistas">Nutricionistas</option>
+                            <option value="Farmácias e drogarias">Farmácias e drogarias</option>
+                            <option value="Clínicas de estética">Clínicas de estética</option>
+                        </optgroup>
+                        <optgroup label="🏋️ Fitness & Bem-estar">
+                            <option value="Academias de ginástica">Academias de ginástica</option>
+                            <option value="Studios de pilates">Studios de pilates</option>
+                            <option value="Studios de yoga">Studios de yoga</option>
+                            <option value="Personal trainers">Personal trainers</option>
+                        </optgroup>
+                        <optgroup label="💈 Beleza & Estética">
+                            <option value="Salões de beleza">Salões de beleza</option>
+                            <option value="Barbearias">Barbearias</option>
+                            <option value="Estúdios de tatuagem">Estúdios de tatuagem</option>
+                            <option value="Manicure e pedicure">Manicure e pedicure</option>
+                            <option value="Clínicas de estética e depilação">Clínicas de estética e depilação</option>
+                        </optgroup>
+                        <optgroup label="🍕 Alimentação">
+                            <option value="Restaurantes">Restaurantes</option>
+                            <option value="Pizzarias">Pizzarias</option>
+                            <option value="Lanchonetes e hamburguerias">Lanchonetes e hamburguerias</option>
+                            <option value="Padarias e confeitarias">Padarias e confeitarias</option>
+                            <option value="Cafeterias">Cafeterias</option>
+                            <option value="Churrascarias">Churrascarias</option>
+                        </optgroup>
+                        <optgroup label="🏠 Imóveis & Construção">
+                            <option value="Imobiliárias">Imobiliárias</option>
+                            <option value="Construtoras e reformas">Construtoras e reformas</option>
+                            <option value="Engenheiros e arquitetos">Engenheiros e arquitetos</option>
+                            <option value="Eletricistas">Eletricistas</option>
+                            <option value="Encanadores e hidráulicos">Encanadores e hidráulicos</option>
+                        </optgroup>
+                        <optgroup label="🚗 Automotivo">
+                            <option value="Oficinas mecânicas">Oficinas mecânicas</option>
+                            <option value="Autopeças">Autopeças</option>
+                            <option value="Lava jatos e estética automotiva">Lava jatos e estética automotiva</option>
+                            <option value="Despachantes">Despachantes</option>
+                        </optgroup>
+                        <optgroup label="💼 Serviços Empresariais">
+                            <option value="Escritórios de contabilidade">Escritórios de contabilidade</option>
+                            <option value="Escritórios de advocacia">Escritórios de advocacia</option>
+                            <option value="Agências de marketing digital">Agências de marketing digital</option>
+                            <option value="Empresas de tecnologia e TI">Empresas de tecnologia e TI</option>
+                            <option value="Consultorias financeiras">Consultorias financeiras</option>
+                            <option value="Seguradoras e corretoras">Seguradoras e corretoras</option>
+                        </optgroup>
+                        <optgroup label="📦 Comércio & Varejo">
+                            <option value="Lojas de roupas e moda">Lojas de roupas e moda</option>
+                            <option value="Lojas de calçados">Lojas de calçados</option>
+                            <option value="Óticas">Óticas</option>
+                            <option value="Livrarias e papelarias">Livrarias e papelarias</option>
+                            <option value="Lojas de eletrônicos">Lojas de eletrônicos</option>
+                            <option value="Supermercados e mercados">Supermercados e mercados</option>
+                        </optgroup>
+                        <optgroup label="🐾 Pet">
+                            <option value="Pet shops">Pet shops</option>
+                            <option value="Clínicas veterinárias">Clínicas veterinárias</option>
+                            <option value="Banho e tosa">Banho e tosa</option>
+                        </optgroup>
+                        <optgroup label="📚 Educação">
+                            <option value="Escolas e colégios">Escolas e colégios</option>
+                            <option value="Cursos e treinamentos">Cursos e treinamentos</option>
+                            <option value="Escolas de idiomas">Escolas de idiomas</option>
+                            <option value="Escolas de música">Escolas de música</option>
+                        </optgroup>
+                        <optgroup label="🚚 Logística & Transporte">
+                            <option value="Transportadoras e logística">Transportadoras e logística</option>
+                            <option value="Táxi e transporte executivo">Táxi e transporte executivo</option>
+                            <option value="Mudanças e frete">Mudanças e frete</option>
+                        </optgroup>
+                    </select>
                     <ValidationMessage For="() => _buscaDto.Nicho" style="color: var(--danger); font-size: 0.8rem; margin-top: 4px;" />
                 </div>
 
-                <!-- Localização -->
-                <div class="form-group" style="margin-bottom: 0;">
-                    <label class="form-label">Localização (Cidade - UF)</label>
-                    <InputText class="form-control-custom" placeholder="Ex.: São Paulo - SP, Campinas, Curitiba..." @bind-Value="_buscaDto.Localizacao" />
+                <!-- Localização com autocomplete -->
+                <div class="form-group" style="margin-bottom: 0; position: relative;">
+                    <label class="form-label">Cidade</label>
+                    <input type="text"
+                           class="form-control-custom"
+                           placeholder="Digite a cidade... ex: Araras, São Paulo, Curitiba"
+                           value="@_buscaDto.Localizacao"
+                           @oninput="OnCidadeInput"
+                           @onblur="FecharSugestoes"
+                           autocomplete="off" />
                     <ValidationMessage For="() => _buscaDto.Localizacao" style="color: var(--danger); font-size: 0.8rem; margin-top: 4px;" />
+
+                    @if (_cidadesFiltradas.Count > 0 && _mostrarSugestoes)
+                    {
+                        <ul class="autocomplete-list">
+                            @foreach (var c in _cidadesFiltradas)
+                            {
+                                <li class="autocomplete-item" @onmousedown="() => SelecionarCidadeSugerida(c)">
+                                    📍 @c
+                                </li>
+                            }
+                        </ul>
+                    }
                 </div>
 
                 <!-- Botão de Busca -->
@@ -62,32 +158,6 @@
                 </button>
             </div>
         </EditForm>
-
-        <!-- Chips Sugestões de Nicho -->
-        <div style="margin-top: 18px;">
-            <span style="font-size: 0.78rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Exemplos de Nichos Populares:</span>
-            <div class="chips-container">
-                @foreach (var chip in _nichosSugeridos)
-                {
-                    <button type="button" class="chip-btn" @onclick="() => SelecionarNicho(chip)">
-                        @chip
-                    </button>
-                }
-            </div>
-        </div>
-
-        <!-- Chips Sugestões de Localização -->
-        <div style="margin-top: 12px;">
-            <span style="font-size: 0.78rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Cidades em Destaque:</span>
-            <div class="chips-container">
-                @foreach (var city in _cidadesSugeridas)
-                {
-                    <button type="button" class="chip-btn" @onclick="() => SelecionarCidade(city)">
-                        📍 @city
-                    </button>
-                }
-            </div>
-        </div>
     </div>
 
     <!-- Resultados da Busca -->
@@ -239,7 +309,7 @@
     private readonly BuscaEstabelecimentoDto _buscaDto = new()
     {
         Nicho = "Clínicas odontológicas",
-        Localizacao = "São Paulo - SP"
+        Localizacao = "Araras - SP"
     };
 
     private List<EstabelecimentoDto>? _resultados;
@@ -248,18 +318,99 @@
     private bool _salvandoTodos = false;
     private Guid _userId;
 
-    private readonly string[] _nichosSugeridos = new[]
+    // Autocomplete de cidades
+    private bool _mostrarSugestoes = false;
+    private List<string> _cidadesFiltradas = new();
+
+    private static readonly string[] _todasAsCidades = new[]
     {
-        "Clínicas odontológicas", "Restaurantes", "Academias", "Salões de beleza",
-        "Oficinas mecânicas", "Imobiliárias", "Lojas de roupas", "Escritórios de contabilidade",
-        "Pet shops", "Farmácias"
+        // São Paulo - DDD 11
+        "São Paulo - SP", "Guarulhos - SP", "Osasco - SP", "Santo André - SP",
+        "São Bernardo do Campo - SP", "Mogi das Cruzes - SP", "Barueri - SP", "Cotia - SP",
+        "Itaquaquecetuba - SP", "Carapicuíba - SP", "Taboão da Serra - SP", "Santos - SP",
+        "São Vicente - SP", "Guarujá - SP", "Praia Grande - SP",
+        // São Paulo Interior - DDD 19
+        "Campinas - SP", "Araras - SP", "Limeira - SP", "Piracicaba - SP",
+        "Rio Claro - SP", "Leme - SP", "Americana - SP", "Santa Bárbara d'Oeste - SP",
+        "Sumaré - SP", "Hortolândia - SP", "Jundiaí - SP", "Indaiatuba - SP",
+        "Itu - SP", "Salto - SP", "Valinhos - SP", "Vinhedo - SP", "Itatiba - SP",
+        "Bragança Paulista - SP", "Atibaia - SP",
+        // São Paulo Interior - DDD 16
+        "Ribeirão Preto - SP", "Franca - SP", "Araraquara - SP", "São Carlos - SP",
+        "Barretos - SP", "Jaboticabal - SP",
+        // São Paulo Interior - DDD 17
+        "São José do Rio Preto - SP", "Catanduva - SP", "Votuporanga - SP",
+        // São Paulo Interior - DDD 14
+        "Bauru - SP", "Marília - SP", "Jaú - SP", "Lins - SP",
+        // São Paulo Interior - DDD 15
+        "Sorocaba - SP", "Botucatu - SP", "Itapetininga - SP",
+        // São Paulo Interior - DDD 12
+        "São José dos Campos - SP", "Taubaté - SP", "Jacareí - SP", "Pindamonhangaba - SP",
+        // São Paulo Interior - DDD 18
+        "Presidente Prudente - SP", "Araçatuba - SP",
+        // Rio de Janeiro
+        "Rio de Janeiro - RJ", "Niterói - RJ", "Nova Iguaçu - RJ", "Duque de Caxias - RJ",
+        "São Gonçalo - RJ", "Campos dos Goytacazes - RJ", "Petrópolis - RJ", "Nova Friburgo - RJ",
+        // Minas Gerais
+        "Belo Horizonte - MG", "Contagem - MG", "Uberlândia - MG", "Juiz de Fora - MG",
+        "Betim - MG", "Uberaba - MG", "Governador Valadares - MG", "Montes Claros - MG",
+        // Paraná
+        "Curitiba - PR", "Londrina - PR", "Maringá - PR", "Foz do Iguaçu - PR",
+        "Ponta Grossa - PR", "Cascavel - PR",
+        // Rio Grande do Sul
+        "Porto Alegre - RS", "Caxias do Sul - RS", "Canoas - RS", "Pelotas - RS",
+        "Santa Maria - RS", "Novo Hamburgo - RS",
+        // Santa Catarina
+        "Florianópolis - SC", "Joinville - SC", "Blumenau - SC", "Chapecó - SC",
+        "Criciúma - SC", "Itajaí - SC",
+        // Bahia
+        "Salvador - BA", "Feira de Santana - BA", "Vitória da Conquista - BA", "Camaçari - BA",
+        // Ceará
+        "Fortaleza - CE", "Caucaia - CE", "Juazeiro do Norte - CE",
+        // Pernambuco
+        "Recife - PE", "Olinda - PE", "Caruaru - PE", "Petrolina - PE",
+        // Outros estados
+        "Brasília - DF", "Manaus - AM", "Belém - PA", "Goiânia - GO",
+        "Campo Grande - MS", "Cuiabá - MT", "Natal - RN", "João Pessoa - PB",
+        "Maceió - AL", "Aracaju - SE", "Teresina - PI", "São Luís - MA",
+        "Macapá - AP", "Boa Vista - RR", "Porto Velho - RO", "Rio Branco - AC",
+        "Palmas - TO", "Vitória - ES"
     };
 
-    private readonly string[] _cidadesSugeridas = new[]
+    private void OnCidadeInput(ChangeEventArgs e)
     {
-        "São Paulo - SP", "Campinas - SP", "Rio de Janeiro - RJ", "Belo Horizonte - MG",
-        "Curitiba - PR", "Brasília - DF", "Salvador - BA", "Porto Alegre - RS"
-    };
+        var valor = e.Value?.ToString() ?? "";
+        _buscaDto.Localizacao = valor;
+
+        if (valor.Length >= 2)
+        {
+            _cidadesFiltradas = _todasAsCidades
+                .Where(c => c.Contains(valor, StringComparison.OrdinalIgnoreCase))
+                .Take(8)
+                .ToList();
+            _mostrarSugestoes = _cidadesFiltradas.Count > 0;
+        }
+        else
+        {
+            _cidadesFiltradas = new();
+            _mostrarSugestoes = false;
+        }
+    }
+
+    private void SelecionarCidadeSugerida(string cidade)
+    {
+        _buscaDto.Localizacao = cidade;
+        _cidadesFiltradas = new();
+        _mostrarSugestoes = false;
+    }
+
+    private async Task FecharSugestoes()
+    {
+        // Delay para permitir o click na sugestão antes de fechar
+        await Task.Delay(180);
+        _mostrarSugestoes = false;
+    }
+
 
     protected override async Task OnInitializedAsync()
     {
@@ -285,16 +436,6 @@
         {
             await ExecutarBuscaAsync();
         }
-    }
-
-    private void SelecionarNicho(string nicho)
-    {
-        _buscaDto.Nicho = nicho;
-    }
-
-    private void SelecionarCidade(string cidade)
-    {
-        _buscaDto.Localizacao = cidade;
     }
 
     private async Task ExecutarBuscaAsync()

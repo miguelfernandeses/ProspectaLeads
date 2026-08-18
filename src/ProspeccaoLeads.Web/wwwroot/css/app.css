@@ -694,6 +694,60 @@ h1, h2, h3, h4, h5, h6 {
     color: #FFFFFF;
 }
 
+/* Autocomplete de cidade */
+.autocomplete-list {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-top: none;
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
+    list-style: none;
+    margin: 0;
+    padding: 4px 0;
+    z-index: 1000;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    max-height: 260px;
+    overflow-y: auto;
+}
+
+.autocomplete-item {
+    padding: 10px 14px;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: background 0.12s, color 0.12s;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+
+.autocomplete-item:last-child {
+    border-bottom: none;
+}
+
+.autocomplete-item:hover {
+    background: var(--primary-glow);
+    color: #fff;
+}
+
+/* Select com optgroups */
+select.form-control-custom optgroup {
+    font-weight: 700;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding: 4px 0;
+}
+
+select.form-control-custom option {
+    font-weight: 400;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    background: var(--bg-card);
+    padding: 6px 8px;
+}
+
 /* Rating Stars */
 .rating-pill {
     display: inline-flex;
