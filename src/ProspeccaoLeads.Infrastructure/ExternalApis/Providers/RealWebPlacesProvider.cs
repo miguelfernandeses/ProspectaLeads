@@ -53,27 +53,35 @@ public class RealWebPlacesProvider : IEstabelecimentoProvider
 
             var nomesVistos = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            foreach (var query in queries)
+            // Dispara todas as 5 buscas concorrentemente em paralelo
+            var tasks = queries.Select(async q =>
             {
-                if (resultados.Count >= maxResultados) break;
-
                 try
                 {
-                    var items = await ExecutarBuscaAsync(query, nicho, cidade, estado, ct);
-                    foreach (var item in items)
-                    {
-                        if (resultados.Count >= maxResultados) break;
+                    using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                    cts.CancelAfter(TimeSpan.FromSeconds(3.5));
+                    return await ExecutarBuscaAsync(q, nicho, cidade, estado, cts.Token);
+                }
+                catch
+                {
+                    return new List<EstabelecimentoDto>();
+                }
+            }).ToList();
 
-                        if (nomesVistos.Add(item.Nome))
-                        {
-                            resultados.Add(item);
-                        }
+            var batches = await Task.WhenAll(tasks);
+
+            foreach (var batch in batches)
+            {
+                foreach (var item in batch)
+                {
+                    if (resultados.Count >= maxResultados) break;
+
+                    if (nomesVistos.Add(item.Nome))
+                    {
+                        resultados.Add(item);
                     }
                 }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Erro ao processar query web '{Query}'", query);
-                }
+                if (resultados.Count >= maxResultados) break;
             }
         }
         catch (Exception ex)

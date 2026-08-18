@@ -34,6 +34,7 @@ public class EstabelecimentoServiceTests
             new[] { _providerMock.Object },
             _leadRepoMock.Object,
             _historyServiceMock.Object,
+            new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions()),
             _loggerMock.Object);
     }
 

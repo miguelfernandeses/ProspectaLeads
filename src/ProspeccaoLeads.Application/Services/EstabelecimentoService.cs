@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using ProspeccaoLeads.Application.Common;
 using ProspeccaoLeads.Application.DTOs.Estabelecimento;
@@ -11,17 +12,20 @@ public class EstabelecimentoService : IEstabelecimentoService
     private readonly IEnumerable<IEstabelecimentoProvider> _providers;
     private readonly ILeadRepository _leadRepository;
     private readonly ISearchHistoryService _historyService;
+    private readonly IMemoryCache _memoryCache;
     private readonly ILogger<EstabelecimentoService> _logger;
 
     public EstabelecimentoService(
         IEnumerable<IEstabelecimentoProvider> providers,
         ILeadRepository leadRepository,
         ISearchHistoryService historyService,
+        IMemoryCache memoryCache,
         ILogger<EstabelecimentoService> logger)
     {
         _providers = providers.OrderBy(p => p.Prioridade);
         _leadRepository = leadRepository;
         _historyService = historyService;
+        _memoryCache = memoryCache;
         _logger = logger;
     }
 
@@ -47,28 +51,61 @@ public class EstabelecimentoService : IEstabelecimentoService
         List<EstabelecimentoDto> resultados = new();
         string? provedorUtilizado = null;
 
-        foreach (var provider in _providers)
+        var cacheKey = $"search_{nicho.ToLowerInvariant()}_{localizacao.ToLowerInvariant()}";
+        if (_memoryCache.TryGetValue(cacheKey, out List<EstabelecimentoDto>? cachedResultados) && cachedResultados != null && cachedResultados.Count > 0)
         {
-            try
+            _logger.LogInformation("Retornando {Count} resultados do cache em memória para '{Nicho}' em '{Loc}'", cachedResultados.Count, nicho, localizacao);
+            resultados = cachedResultados.Select(c => new EstabelecimentoDto
             {
-                if (await provider.DisponivelAsync(ct))
+                Nome = c.Nome,
+                Categoria = c.Categoria,
+                Telefone = c.Telefone,
+                WhatsApp = c.WhatsApp,
+                Email = c.Email,
+                Endereco = c.Endereco,
+                Cidade = c.Cidade,
+                Estado = c.Estado,
+                CEP = c.CEP,
+                Website = c.Website,
+                Instagram = c.Instagram,
+                Avaliacao = c.Avaliacao,
+                QuantidadeAvaliacoes = c.QuantidadeAvaliacoes,
+                Latitude = c.Latitude,
+                Longitude = c.Longitude,
+                Fonte = c.Fonte,
+                Observacoes = c.Observacoes
+            }).ToList();
+        }
+        else
+        {
+            foreach (var provider in _providers)
+            {
+                try
                 {
-                    _logger.LogInformation("Tentando buscar estabelecimentos via provedor {ProviderName} para Nicho='{Nicho}', Localizacao='{Loc}'",
-                        provider.NomeProvedor, nicho, localizacao);
-
-                    var itens = await provider.BuscarAsync(nicho, localizacao, maxResultados, ct);
-                    if (itens != null && itens.Count > 0)
+                    if (await provider.DisponivelAsync(ct))
                     {
-                        resultados = itens;
-                        provedorUtilizado = provider.NomeProvedor;
-                        _logger.LogInformation("Provedor {ProviderName} retornou {Count} estabelecimentos.", provider.NomeProvedor, itens.Count);
-                        break;
+                        _logger.LogInformation("Tentando buscar estabelecimentos via provedor {ProviderName} para Nicho='{Nicho}', Localizacao='{Loc}'",
+                            provider.NomeProvedor, nicho, localizacao);
+
+                        var itens = await provider.BuscarAsync(nicho, localizacao, maxResultados, ct);
+                        if (itens != null && itens.Count > 0)
+                        {
+                            resultados = itens;
+                            provedorUtilizado = provider.NomeProvedor;
+                            _logger.LogInformation("Provedor {ProviderName} retornou {Count} estabelecimentos.", provider.NomeProvedor, itens.Count);
+                            break;
+                        }
                     }
                 }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Falha ao buscar estabelecimentos no provedor {ProviderName}. Tentando próximo provedor...", provider.NomeProvedor);
+                }
             }
-            catch (Exception ex)
+
+            if (resultados.Count > 0)
             {
-                _logger.LogWarning(ex, "Falha ao buscar estabelecimentos no provedor {ProviderName}. Tentando próximo provedor...", provider.NomeProvedor);
+                _memoryCache.Set(cacheKey, resultados, TimeSpan.FromMinutes(30));
             }
         }
 
