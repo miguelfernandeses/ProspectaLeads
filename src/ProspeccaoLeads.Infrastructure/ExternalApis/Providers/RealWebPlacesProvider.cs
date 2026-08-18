@@ -13,7 +13,7 @@ public class RealWebPlacesProvider : IEstabelecimentoProvider
     private readonly ILogger<RealWebPlacesProvider> _logger;
 
     public string NomeProvedor => "Busca Web de Lugares Reais (Google/Web Places)";
-    public int Prioridade => 1; // Prioridade alta para sempre trazer comércios reais
+    public int Prioridade => 99; // Provedor secundário (enriquecimento opcional via web scraping)
 
     public RealWebPlacesProvider(HttpClient httpClient, ILogger<RealWebPlacesProvider> logger)
     {

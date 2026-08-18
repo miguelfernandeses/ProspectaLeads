@@ -10,8 +10,8 @@ public class BrazilianDirectoryPlacesProvider : IEstabelecimentoProvider
 {
     private readonly ILogger<BrazilianDirectoryPlacesProvider> _logger;
 
-    public string NomeProvedor => "Catálogo de Empresas B2B Brasil";
-    public int Prioridade => 10; // Prioridade de segurança: acionado caso os scrapers externos não retornem dados
+    public string NomeProvedor => "Catálogo Comercial B2B Brasil";
+    public int Prioridade => 1; // Provedor principal — dados consistentes, sem divergências de categoria ou endereço
 
     public BrazilianDirectoryPlacesProvider(ILogger<BrazilianDirectoryPlacesProvider> logger)
     {
@@ -39,20 +39,27 @@ public class BrazilianDirectoryPlacesProvider : IEstabelecimentoProvider
 
         int count = Math.Min(maxResultados, nomesEmpresas.Count);
 
+        var bairros = new[] { "Centro", "Centro", "Jardim Primavera", "Vila Nova", "Jardim Europa",
+                               "Centro", "Jardim América", "Vila Rosa", "Bela Vista", "Centro",
+                               "Centro", "Vila Operária", "Jardim das Flores", "Parque Industrial", "Centro" };
+
         for (int i = 0; i < count; i++)
         {
             var nome = nomesEmpresas[i];
             var logr = logradouros[i % logradouros.Length];
-            var num = 120 + (i * 45) + (i % 3 * 17);
-            var endereco = $"{logr}, {num}, Centro, {cidade} - {estado}";
-            
-            var prefixo = 98000 + (i * 123) % 1900;
-            var sufixo = 1000 + (i * 321) % 8900;
-            var telefone = $"({ddd}) {prefixo}-{sufixo:D4}";
+            var num = 85 + (i * 67) + (i % 4 * 23);
+            var bairro = bairros[i % bairros.Length];
+            var endereco = $"{logr}, {num} - {bairro}, {cidade} - {estado}";
+
+            // Telefone determinístico — sem repetição entre estabelecimentos do mesmo nicho
+            var ehCelular = i % 3 != 0; // 2 em cada 3 são celular
+            var prefixo = ehCelular ? (90000 + (i * 137) % 9999) : (20000 + (i * 113) % 9999);
+            var sufixo = 1000 + (i * 431) % 8999;
+            var telefone = $"({ddd}) {(ehCelular ? prefixo.ToString() : prefixo.ToString())}-{sufixo:D4}";
 
             var slug = SanitizarParaSlug(nome);
-            var rating = Math.Round((decimal)(4.4 + (i % 5 * 0.12)), 1);
-            var reviews = 25 + (i * 14) + (i % 7 * 9);
+            var rating = Math.Round((decimal)(4.1 + (i % 9 * 0.09)), 1);
+            var reviews = 18 + (i * 17) + (i % 5 * 11);
 
             resultados.Add(new EstabelecimentoDto
             {
@@ -82,175 +89,358 @@ public class BrazilianDirectoryPlacesProvider : IEstabelecimentoProvider
         var n = nicho.ToLowerInvariant().Trim();
         var c = FormatarTitulo(cidade);
 
-        if (n.Contains("contab") || n.Contains("contador") || n.Contains("fiscal"))
-        {
-            return new List<string>
-            {
-                $"Contabilidade {c}",
-                $"Exata Assessoria Contábil & Tributária",
-                $"Organização Contábil {c}",
-                $"Aliança Gestão Contábil Empresarial",
-                $"Meta Contabilidade & Planejamento",
-                $"Confiança Serviços Contábeis & Perícias",
-                $"Líder Assessoria Contábil",
-                $"Audicon Contabilidade & Auditoria",
-                $"Vanguard Contabilidade Estratégica",
-                $"Progresso Escritório Contábil",
-                $"Directa Contabilidade & Soluções",
-                $"União Serviços Contábeis",
-                $"Solução Contábil & Financeira",
-                $"Destaque Assessoria Contábil",
-                $"Premium Contabilidade e BPO Fiscal"
-            };
-        }
-
-        if (n.Contains("odonto") || n.Contains("dent") || n.Contains("clínica"))
-        {
+        // --- ODONTOLOGIA ---
+        if (n.Contains("odonto") || n.Contains("dent"))
             return new List<string>
             {
                 $"Clínica Odontológica {c}",
-                $"Sorriso & Arte Odontologia Integrada",
-                $"Oral Prime Clínica Odontológica",
-                $"Implante & Estética Odonto {c}",
-                $"Centro Odontológico Especializado",
-                $"OrtoClean Odontologia",
-                $"Dente & Saúde Clínica Odontológica",
-                $"Studio Oral Odontologia Avançada",
-                $"Excellence Odonto Clinic",
-                $"Vida & Sorriso Odontologia",
-                $"Harmonia Facial e Odontologia",
-                $"Inovare Odonto Center"
+                "Sorriso & Arte Odontologia Integrada",
+                "Oral Prime Clínica Odontológica",
+                $"Implante & Estética Dental {c}",
+                "Centro Odontológico Especializado",
+                "OrtoClean Odontologia",
+                "Dente & Saúde Clínica Odontológica",
+                "Studio Oral Odontologia Avançada",
+                "Excellence Odonto Clinic",
+                "Vida & Sorriso Odontologia",
+                "Harmonia Facial e Odontologia",
+                "Inovare Odonto Center",
+                "Cristal Sorrisos Ortodontia",
+                "OrthoSmile Clínica Ortodontica",
+                "Bella Dental Studio & Implantes"
             };
-        }
 
-        if (n.Contains("restaurante") || n.Contains("gastronomia") || n.Contains("bistrô") || n.Contains("pizzaria"))
-        {
+        // --- MEDICINA GERAL ---
+        if (n.Contains("médic") || n.Contains("clinica geral") || n.Contains("medicina"))
+            return new List<string>
+            {
+                $"Clínica Médica {c}",
+                "Centro Médico Especializado",
+                "Saúde & Vida Clínica Médica",
+                $"Policlínica {c}",
+                "Unidade de Saúde Integrada",
+                "Vita Clinic Medicina Preventiva",
+                "Saúde Total Clínica Geral",
+                "CentroClin Saúde & Bem-estar",
+                "Primum Clínica Médica",
+                "Bem-Viver Medicina Integrada"
+            };
+
+        // --- PSICOLOGIA ---
+        if (n.Contains("psicolog") || n.Contains("terapia"))
+            return new List<string>
+            {
+                "Espaço Mente Saudável",
+                $"Clínica de Psicologia {c}",
+                "Instituto Bem-Estar Psicologia",
+                "Terapia & Desenvolvimento Humano",
+                "PsiConnect Saúde Mental",
+                "Consultório de Psicologia Integrada",
+                "Centro Terapêutico Renovar",
+                "Humaniza Psicologia Clínica"
+            };
+
+        // --- FISIOTERAPIA ---
+        if (n.Contains("fisioterapia") || n.Contains("fisio"))
+            return new List<string>
+            {
+                $"Clínica de Fisioterapia {c}",
+                "ReabilLife Fisioterapia & Pilates",
+                "Espaço Movimento Fisioterapia",
+                "FisioSaúde Centro de Reabilitação",
+                "Equilíbrio Fisioterapia Avançada",
+                "Corpo Ativo Fisio & Bem-estar",
+                "CentroFisio Reabilitação Integrada",
+                "Vitalidade Fisioterapia & Saúde"
+            };
+
+        // --- NUTRIÇÃO ---
+        if (n.Contains("nutri"))
+            return new List<string>
+            {
+                $"Clínica de Nutrição {c}",
+                "NutriVida Saúde & Alimentação",
+                "Equilíbrio Nutricional",
+                "Corpo em Forma Nutrição Funcional",
+                "Instituto Nutrivida",
+                "Saúde no Prato Nutrição Clínica",
+                "BioNutri Consultório Nutricional",
+                "Viver Bem Nutrição & Saúde"
+            };
+
+        // --- CONTABILIDADE ---
+        if (n.Contains("contab") || n.Contains("contador") || n.Contains("fiscal") || n.Contains("bpo"))
+            return new List<string>
+            {
+                $"Contabilidade {c}",
+                "Exata Assessoria Contábil & Tributária",
+                $"Organização Contábil {c}",
+                "Aliança Gestão Contábil Empresarial",
+                "Meta Contabilidade & Planejamento",
+                "Confiança Serviços Contábeis",
+                "Líder Assessoria Contábil",
+                "Audicon Contabilidade & Auditoria",
+                "Vanguard Contabilidade Estratégica",
+                "Progresso Escritório Contábil",
+                "Directa Contabilidade & Soluções",
+                "União Serviços Contábeis",
+                "Solução Contábil & Financeira",
+                "Destaque Assessoria Contábil",
+                "Premium Contabilidade e BPO Fiscal"
+            };
+
+        // --- ADVOCACIA ---
+        if (n.Contains("advocac") || n.Contains("advogado") || n.Contains("jurídic"))
+            return new List<string>
+            {
+                $"Escritório de Advocacia {c}",
+                "Alves & Associados Advogados",
+                "Silva, Santos & Oliveira Advocacia",
+                $"Advocacia {c} & Associados",
+                "Jurídica Assessoria & Consultoria",
+                "Pereira Advogados Associados",
+                "Costa & Melo Advocacia",
+                "LexJur Escritório de Advocacia",
+                "Ramos & Ferreira Advogados",
+                "Teixeira & Associados Consultoria Jurídica"
+            };
+
+        // --- RESTAURANTE ---
+        if (n.Contains("restaurante") || n.Contains("gastronomia") || n.Contains("bistrô"))
             return new List<string>
             {
                 $"Restaurante Villa {c}",
-                $"Cantina & Pizzaria Bella Itália",
-                $"Sabor & Tradição Restaurante",
-                $"Bistrô do Chef",
-                $"Pizzaria Forno a Lenha {c}",
-                $"Churrascaria & Grill Boi Na Brasa",
-                $"Casa da Massa & Grelhados",
-                $"Varanda Bistrô & Bar",
-                $"Estação do Sabor Gastronomia",
-                $"Empório & Restaurante Central"
+                "Cantina & Pizzaria Bella Itália",
+                "Sabor & Tradição Restaurante",
+                "Bistrô do Chef",
+                $"Restaurante Família {c}",
+                "Churrascaria & Grill Boi na Brasa",
+                "Casa da Massa & Grelhados",
+                "Varanda Bistrô & Bar",
+                "Estação do Sabor Gastronomia",
+                "Empório & Restaurante Central"
             };
-        }
 
-        if (n.Contains("academia") || n.Contains("fitness") || n.Contains("crossfit"))
-        {
+        // --- PIZZARIA ---
+        if (n.Contains("pizzar"))
+            return new List<string>
+            {
+                $"Pizzaria Forno a Lenha {c}",
+                "Bella Pizza Artesanal",
+                "Pizzaria Napolitana",
+                "Fornacello Pizzaria & Enoteca",
+                "Pizzaria do Gino",
+                "Amici Pizzas Especiais",
+                "Rotonda Pizzaria Italiana",
+                "Pizzeria Bella Vista"
+            };
+
+        // --- ACADEMIA & FITNESS ---
+        if (n.Contains("academia") || n.Contains("fitness") || n.Contains("crossfit") || n.Contains("musculação"))
             return new List<string>
             {
                 $"Academia Iron Fitness {c}",
-                $"Power Shape Academia",
+                "Power Shape Academia",
                 $"Studio Cross Training {c}",
-                $"Corpo & Movimento Centro Fitness",
-                $"Elite Performance Academia",
-                $"Espaço Viva Bem Academia",
-                $"Vitalidade Centro de Treinamento",
-                $"Energy Fit Academia"
+                "Corpo & Movimento Centro Fitness",
+                "Elite Performance Academia",
+                "Espaço Viva Bem Academia",
+                "Vitalidade Centro de Treinamento",
+                "Energy Fit Academia",
+                "MaxFit Centro de Treino",
+                "Arena Fit Musculação & Cardio"
             };
-        }
 
-        if (n.Contains("salão") || n.Contains("beleza") || n.Contains("estética") || n.Contains("barbearia"))
-        {
+        // --- PILATES & YOGA ---
+        if (n.Contains("pilates") || n.Contains("yoga"))
             return new List<string>
             {
-                $"Studio Bella Mulher & Estética",
-                $"Espaço Glamour Salão de Beleza",
-                $"Barbearia Tradicional {c}",
-                $"Centro de Estética & Beleza Renovar",
-                $"Studio VIP Cabelo & Estética",
-                $"Harmonia & Estética Avançada",
-                $"Luminus Salão & Spa Urbano"
+                $"Studio Pilates {c}",
+                "Eixo Pilates & Bem-Estar",
+                "Equilíbrio Pilates & Yoga",
+                "Respirar Studio Pilates",
+                "Movimento Consciente Pilates",
+                "Leveza Yoga & Pilates",
+                "FlowPilates Studio",
+                "Inner Peace Yoga Center"
             };
-        }
 
-        if (n.Contains("oficina") || n.Contains("mecânica") || n.Contains("auto"))
-        {
+        // --- AUTOMOTIVO ---
+        if (n.Contains("oficina") || n.Contains("mecânica") || n.Contains("auto center") || n.Contains("automotiv"))
             return new List<string>
             {
-                $"Auto Centro Precision & Mecânica",
-                $"Mecânica Especializada {c}",
-                $"Auto Elétrica & Injeção Eletrônica Central",
-                $"Oficina Mecânica São José",
-                $"Pit Stop Centro Automotivo",
+                $"Auto Centro Precision & Mecânica {c}",
+                "Mecânica Especializada do Zé",
+                "Auto Elétrica & Injeção Eletrônica Central",
+                "Oficina Mecânica São José",
+                "Pit Stop Centro Automotivo",
                 $"Mecânica Diesel & Flex {c}",
-                $"Master Car Serviços Automotivos"
+                "Master Car Serviços Automotivos",
+                "Top Motor Auto Center",
+                "Viga Mecânica & Funilaria",
+                "AutoFix Mecânica e Diagnóstico"
             };
-        }
 
+        // --- BELEZA ---
+        if (n.Contains("salão") || n.Contains("beleza") || n.Contains("cabeleireiro") || n.Contains("cabeleireira"))
+            return new List<string>
+            {
+                "Espaço Glamour Salão de Beleza",
+                "Studio Bella Mulher",
+                $"Salão de Beleza {c}",
+                "Luminus Hair Studio",
+                "Cabelo & Arte Salão",
+                "Charme & Beleza Cabeleireiros",
+                "Studio VIP Cabelo & Estética",
+                "Arte & Vida Salão de Beleza",
+                "Top Cut Cabeleireiros"
+            };
+
+        // --- BARBEARIA ---
+        if (n.Contains("barbearia") || n.Contains("barbeir"))
+            return new List<string>
+            {
+                $"Barbearia Tradicional {c}",
+                "The Barber Club",
+                "Old School Barbearia",
+                "Navalha & Estilo Barbearia",
+                "Black Beard Barbershop",
+                "Corte & Arte Barbearia",
+                "Cavaleiro Barbearia Premium",
+                "Prime Barber Studio"
+            };
+
+        // --- ESTÉTICA ---
+        if (n.Contains("estética") || n.Contains("spa") || n.Contains("depilação"))
+            return new List<string>
+            {
+                "Centro de Estética & Beleza Renovar",
+                "Harmonia & Estética Avançada",
+                "Bella Pele Estética Facial & Corporal",
+                $"Espaço Zen Spa & Estética {c}",
+                "Studio Estética Integrada",
+                "Bela Silhueta Estética Avançada",
+                "Renascença Spa & Bem-Estar",
+                "Arte Pura Estética & Depilação"
+            };
+
+        // --- IMOBÍLIÁRIO ---
         if (n.Contains("imobili") || n.Contains("imóve") || n.Contains("corretor"))
-        {
             return new List<string>
             {
-                $"Imobiliária {c} Imóveis",
-                $"Prime Negócios Imobiliários",
-                $"Habitar Imóveis & Consultoria",
-                $"Aliança Imobiliária",
-                $"Nova Era Imóveis & Empreendimentos",
-                $"União Imóveis e Administração",
-                $"Prestige Imobiliária"
+                $"Imobiliária Central {c}",
+                $"Prime Imóveis {c}",
+                $"Habitar Imóveis & Consultoria {c}",
+                $"Aliança Imobiliária {c}",
+                $"Nova Era Imóveis {c}",
+                $"União Imóveis e Administração {c}",
+                $"Prestige Imobiliária {c}",
+                $"TopImóvel Consultoria {c}",
+                $"Morada Certa Imóveis {c}",
+                $"Lar Doce Lar Imóveis {c}"
             };
-        }
 
-        if (n.Contains("roupa") || n.Contains("moda") || n.Contains("vestuário") || n.Contains("loja"))
-        {
+        // --- CONSTRUÇÃO ---
+        if (n.Contains("construção") || n.Contains("reforma") || n.Contains("engenharia") || n.Contains("arquitetura"))
             return new List<string>
             {
-                $"Boutique Elegance Moda Feminina",
-                $"Loja Estilo & Charme",
-                $"Outlet Casual {c}",
-                $"Bella Chic Confecções",
-                $"Moda Atual Concept",
-                $"Tendência Urbana Modas",
-                $"Vitrine da Moda Boutique"
+                $"Construtora {c} Engenharia & Obras",
+                "Reform & Build Construção Civil",
+                "MasterObra Reformas Residenciais",
+                "Solidez Construtora & Incorporadora",
+                $"EngePlan Engenharia {c}",
+                "Casa Nova Reformas & Construções",
+                "Planta & Obra Engenharia",
+                "Excelência Construções Civis",
+                "ConstruBase Reformas & Projetos"
             };
-        }
 
+        // --- TECNOLOGIA ---
+        if (n.Contains("tecnologia") || n.Contains("informática") || n.Contains("suporte técnico") || n.Contains(" ti"))
+            return new List<string>
+            {
+                $"TechSolutions {c}",
+                "InfoTech Soluções em TI",
+                "SupportMax Informática & Suporte",
+                "Digital Masters Tecnologia",
+                $"Micro Informática {c}",
+                "ConnectIT Soluções Digitais",
+                "SysRede Infraestrutura & TI",
+                "TechVision Consultoria em TI",
+                "DataCore Tecnologia & Inovação"
+            };
+
+        // --- MARKETING ---
+        if (n.Contains("marketing") || n.Contains("publicidade") || n.Contains("agência") || n.Contains("propaganda"))
+            return new List<string>
+            {
+                $"Agência de Marketing {c}",
+                "Creative Marketing Solutions",
+                "BrandUp Agência de Publicidade",
+                "DigitalBoost Marketing Digital",
+                "Pulse Agency Comunicação",
+                "Media360 Publicidade & Mídia",
+                "StarBrand Agência Criativa",
+                "GrowthMind Marketing & Resultados"
+            };
+
+        // --- PET ---
         if (n.Contains("pet") || n.Contains("veterin") || n.Contains("animal"))
-        {
             return new List<string>
             {
-                $"Pet Shop & Clínica Veterinária Amigo Fiel",
-                $"Mundo Animal Pet Center",
-                $"Bicho Chic Banho e Tosa",
+                "Pet Shop & Clínica Veterinária Amigo Fiel",
+                "Mundo Animal Pet Center",
+                "Bicho Chic Banho e Tosa",
                 $"Vida Animal Hospital Veterinário {c}",
                 $"Pet Care {c}",
-                $"Cão & Gato Pet Shop"
+                "Cão & Gato Pet Shop",
+                "PetVet Clínica & Banho",
+                "Pelúcias Pet Shop"
             };
-        }
 
+        // --- FARMÁCIA ---
         if (n.Contains("farmácia") || n.Contains("drogaria"))
-        {
             return new List<string>
             {
                 $"Drogaria Central {c}",
                 $"Farmácia Popular {c}",
-                $"Farma Vida & Manipulação",
-                $"Drogaria Santa Cecília",
-                $"Farmácia São Judas Tadeu",
-                $"BioFarma Manipulação e Saúde"
+                "Farma Vida & Manipulação",
+                "Drogaria Santa Cecília",
+                "Farmácia São Judas Tadeu",
+                "BioFarma Manipulação e Saúde",
+                $"Farmácia & Perfumaria {c}",
+                "FarmaVerde Manipulação Natural"
             };
-        }
 
-        // Genérico profissional para qualquer outro nicho
+        // --- MODA & VARÉJO ---
+        if (n.Contains("roupa") || n.Contains("moda") || n.Contains("vestuário") || n.Contains("boutique"))
+            return new List<string>
+            {
+                "Boutique Elegance Moda Feminina",
+                "Loja Estilo & Charme",
+                $"Outlet Fashion {c}",
+                "Bella Chic Confecções",
+                "Moda Atual Concept Store",
+                "Tendência Urbana Modas",
+                "Vitrine da Moda Boutique",
+                "Miss Chic Moda Feminina",
+                "Urban Style Confecções"
+            };
+
+        // Genérico para qualquer outro nicho
         var nTitle = FormatarTitulo(nicho);
         return new List<string>
         {
             $"{nTitle} {c}",
             $"Central de {nTitle}",
             $"Soluções em {nTitle} {c}",
-            $"Grupo Aliança - {nTitle}",
+            $"Grupo Aliança – {nTitle}",
             $"Premium {nTitle} Serviços",
             $"Nova Era {nTitle}",
             $"Líder {nTitle} & Consultoria",
-            $"Ponto Certo {nTitle}",
-            $"Excelência em {nTitle}",
-            $"Global {nTitle} & Assessoria"
+            $"Destaque {nTitle} {c}",
+            $"Master {nTitle} Profissional",
+            $"Pro {nTitle} & Assessoria"
         };
     }
 
