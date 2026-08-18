@@ -90,16 +90,9 @@
 
     private string GetGoogleMapsUrl()
     {
-        if (Latitude.HasValue && Longitude.HasValue && Latitude.Value != 0 && Longitude.Value != 0)
-        {
-            var lat = Latitude.Value.ToString(CultureInfo.InvariantCulture);
-            var lon = Longitude.Value.ToString(CultureInfo.InvariantCulture);
-            return $"https://www.google.com/maps/search/?api=1&query={lat},{lon}";
-        }
-
         var query = !string.IsNullOrWhiteSpace(Endereco) && !Endereco.Contains("Não informado", StringComparison.OrdinalIgnoreCase) && !Endereco.StartsWith("Centro", StringComparison.OrdinalIgnoreCase)
-            ? $"\"{Nome}\", {Endereco}, {Cidade} - {Estado}".Trim()
-            : $"\"{Nome}\" {Cidade} - {Estado}".Trim();
+            ? $"{Nome}, {Endereco}, {Cidade} - {Estado}".Trim()
+            : $"{Nome}, {Cidade} - {Estado}".Trim();
 
         return $"https://www.google.com/maps/search/?api=1&query={Uri.EscapeDataString(query)}";
     }

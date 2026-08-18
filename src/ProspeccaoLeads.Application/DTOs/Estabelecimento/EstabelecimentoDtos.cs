@@ -58,20 +58,13 @@ public class EstabelecimentoDto
 
     public string GetGoogleMapsUrl()
     {
-        if (Latitude.HasValue && Longitude.HasValue && Latitude.Value != 0 && Longitude.Value != 0)
-        {
-            var lat = Latitude.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
-            var lon = Longitude.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
-            return $"https://www.google.com/maps/search/?api=1&query={lat},{lon}";
-        }
-
         var localParts = new[] { Endereco, Cidade, Estado }
-            .Where(s => !string.IsNullOrWhiteSpace(s) && !s.Equals("Centro", StringComparison.OrdinalIgnoreCase));
+            .Where(s => !string.IsNullOrWhiteSpace(s) && !s.Equals("Centro", StringComparison.OrdinalIgnoreCase) && !s.Contains("Não informado", StringComparison.OrdinalIgnoreCase));
         var enderecoCompleto = string.Join(", ", localParts);
 
         var termo = string.IsNullOrWhiteSpace(enderecoCompleto)
-            ? $"\"{Nome}\" {Cidade} - {Estado}".Trim()
-            : $"\"{Nome}\", {enderecoCompleto}".Trim();
+            ? $"{Nome}, {Cidade} - {Estado}".Trim()
+            : $"{Nome}, {enderecoCompleto}".Trim();
 
         var query = Uri.EscapeDataString(termo);
         return $"https://www.google.com/maps/search/?api=1&query={query}";

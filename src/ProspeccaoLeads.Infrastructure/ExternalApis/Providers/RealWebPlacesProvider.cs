@@ -165,6 +165,17 @@ public class RealWebPlacesProvider : IEstabelecimentoProvider
             var snippet = LimparHtml(rawSnippet);
             var url = LimparUrl(rawUrl);
 
+            // Ignorar portais agregadores com listas misturadas de profissionais para evitar misturar contatos
+            if (IsPortalAgregador(url))
+            {
+                continue;
+            }
+
+            if (IsCategoriaIncompativel(nicho, snippet, title))
+            {
+                continue;
+            }
+
             var nome = ExtrairNomeEmpresa(title, snippet, url, nicho, cidade);
             if (string.IsNullOrWhiteSpace(nome) || nome.Length < 3 || IsTextoGenerico(nome, nicho, cidade))
             {
@@ -324,6 +335,46 @@ public class RealWebPlacesProvider : IEstabelecimentoProvider
             return $"{uri.Scheme}://{uri.Host}";
         }
         return null;
+    }
+
+    private static bool IsPortalAgregador(string url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return false;
+        var u = url.ToLowerInvariant();
+        return u.Contains("doctoralia.com.br") ||
+               u.Contains("guiamais.com.br") ||
+               u.Contains("telelistas.net") ||
+               u.Contains("apontador.com.br") ||
+               u.Contains("solutudo.com.br") ||
+               u.Contains("encontra") ||
+               u.Contains("econodata.com.br") ||
+               u.Contains("cnpj.biz") ||
+               u.Contains("casadosdados.com.br") ||
+               u.Contains("jusbrasil.com.br") ||
+               u.Contains("tripadvisor.com") ||
+               u.Contains("tudogostoso.com.br") ||
+               u.Contains("yelp.com") ||
+               u.Contains("yellowpages");
+    }
+
+    private static bool IsCategoriaIncompativel(string nicho, string snippet, string title)
+    {
+        var n = nicho.ToLowerInvariant();
+        var text = $"{title} {snippet}".ToLowerInvariant();
+
+        if (n.Contains("odonto") || n.Contains("dent"))
+        {
+            if (text.Contains("nutricion") && !text.Contains("dent") && !text.Contains("odonto")) return true;
+            if (text.Contains("psicol") && !text.Contains("dent") && !text.Contains("odonto")) return true;
+            if (text.Contains("advogad") || text.Contains("oficina") || text.Contains("imobiliária")) return true;
+        }
+
+        if (n.Contains("contab") || n.Contains("contador"))
+        {
+            if (text.Contains("salão de beleza") || text.Contains("restaurante") || text.Contains("oficina")) return true;
+        }
+
+        return false;
     }
 
     private static bool IsTextoGenerico(string texto, string nicho, string cidade)
