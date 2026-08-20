@@ -51,7 +51,7 @@ public class EstabelecimentoServiceTests
         var existingLeadId = Guid.NewGuid();
         var leadsSalvos = new List<Lead>
         {
-            new() { Id = existingLeadId, UserId = _userId, Nome = "Academia Fit 1", Cidade = "São Paulo" }
+            new(_userId, "Academia Fit 1", cidade: "São Paulo", id: existingLeadId)
         };
 
         _providerMock.Setup(p => p.BuscarAsync("Academia", "São Paulo - SP", 30, It.IsAny<CancellationToken>()))

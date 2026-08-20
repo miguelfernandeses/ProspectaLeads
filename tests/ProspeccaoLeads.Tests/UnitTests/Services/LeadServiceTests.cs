@@ -81,13 +81,7 @@ public class LeadServiceTests
     {
         // Arrange
         var leadId = Guid.NewGuid();
-        var lead = new Lead
-        {
-            Id = leadId,
-            UserId = _userId,
-            Nome = "Academia Iron Fit",
-            Status = StatusLead.Novo
-        };
+        var lead = new Lead(_userId, "Academia Iron Fit", status: StatusLead.Novo, id: leadId);
 
         _repoMock.Setup(r => r.GetByIdAsync(leadId, _userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(lead);

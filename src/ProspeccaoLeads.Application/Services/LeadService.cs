@@ -79,31 +79,27 @@ public class LeadService : ILeadService
             return Result<LeadDto>.Failure($"O estabelecimento '{dto.Nome}' já está cadastrado em seus leads.");
         }
 
-        var lead = new Lead
-        {
-            Id = Guid.NewGuid(),
-            UserId = dto.UserId,
-            Nome = dto.Nome.Trim(),
-            Categoria = dto.Categoria?.Trim(),
-            Telefone = dto.Telefone?.Trim(),
-            WhatsApp = dto.WhatsApp?.Trim(),
-            Email = dto.Email?.Trim(),
-            Endereco = dto.Endereco?.Trim(),
-            Cidade = dto.Cidade?.Trim(),
-            Estado = dto.Estado?.Trim(),
-            CEP = dto.CEP?.Trim(),
-            Website = dto.Website?.Trim(),
-            Instagram = dto.Instagram?.Trim(),
-            Avaliacao = dto.Avaliacao,
-            QuantidadeAvaliacoes = dto.QuantidadeAvaliacoes,
-            Latitude = dto.Latitude,
-            Longitude = dto.Longitude,
-            Observacoes = dto.Observacoes?.Trim(),
-            Status = dto.Status,
-            Fonte = dto.Fonte?.Trim(),
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
-        };
+        var lead = new Lead(
+            userId: dto.UserId,
+            nome: dto.Nome,
+            categoria: dto.Categoria,
+            telefone: dto.Telefone,
+            whatsApp: dto.WhatsApp,
+            email: dto.Email,
+            endereco: dto.Endereco,
+            cidade: dto.Cidade,
+            estado: dto.Estado,
+            cep: dto.CEP,
+            website: dto.Website,
+            instagram: dto.Instagram,
+            avaliacao: dto.Avaliacao,
+            quantidadeAvaliacoes: dto.QuantidadeAvaliacoes,
+            latitude: dto.Latitude,
+            longitude: dto.Longitude,
+            observacoes: dto.Observacoes,
+            status: dto.Status,
+            fonte: dto.Fonte
+        );
 
         var created = await _leadRepository.AddAsync(lead, ct);
         return Result<LeadDto>.Success(MapToDto(created));
@@ -145,25 +141,26 @@ public class LeadService : ILeadService
             return Result.Failure("Lead não encontrado.");
         }
 
-        lead.Nome = dto.Nome.Trim();
-        lead.Categoria = dto.Categoria?.Trim();
-        lead.Telefone = dto.Telefone?.Trim();
-        lead.WhatsApp = dto.WhatsApp?.Trim();
-        lead.Email = dto.Email?.Trim();
-        lead.Endereco = dto.Endereco?.Trim();
-        lead.Cidade = dto.Cidade?.Trim();
-        lead.Estado = dto.Estado?.Trim();
-        lead.CEP = dto.CEP?.Trim();
-        lead.Website = dto.Website?.Trim();
-        lead.Instagram = dto.Instagram?.Trim();
-        lead.Avaliacao = dto.Avaliacao;
-        lead.QuantidadeAvaliacoes = dto.QuantidadeAvaliacoes;
-        lead.Latitude = dto.Latitude;
-        lead.Longitude = dto.Longitude;
-        lead.Observacoes = dto.Observacoes?.Trim();
-        lead.Status = dto.Status;
-        lead.Fonte = dto.Fonte?.Trim();
-        lead.UpdatedAt = DateTime.UtcNow;
+        lead.AtualizarDados(
+            nome: dto.Nome,
+            categoria: dto.Categoria,
+            telefone: dto.Telefone,
+            whatsApp: dto.WhatsApp,
+            email: dto.Email,
+            endereco: dto.Endereco,
+            cidade: dto.Cidade,
+            estado: dto.Estado,
+            cep: dto.CEP,
+            website: dto.Website,
+            instagram: dto.Instagram,
+            avaliacao: dto.Avaliacao,
+            quantidadeAvaliacoes: dto.QuantidadeAvaliacoes,
+            latitude: dto.Latitude,
+            longitude: dto.Longitude,
+            observacoes: dto.Observacoes,
+            status: dto.Status,
+            fonte: dto.Fonte
+        );
 
         await _leadRepository.UpdateAsync(lead, ct);
         return Result.Success();
@@ -177,8 +174,7 @@ public class LeadService : ILeadService
             return Result.Failure("Lead não encontrado.");
         }
 
-        lead.Status = novoStatus;
-        lead.UpdatedAt = DateTime.UtcNow;
+        lead.AtualizarStatus(novoStatus);
 
         await _leadRepository.UpdateAsync(lead, ct);
         return Result.Success();
@@ -192,8 +188,7 @@ public class LeadService : ILeadService
             return Result.Failure("Lead não encontrado.");
         }
 
-        lead.Observacoes = observacoes?.Trim();
-        lead.UpdatedAt = DateTime.UtcNow;
+        lead.AtualizarObservacoes(observacoes);
 
         await _leadRepository.UpdateAsync(lead, ct);
         return Result.Success();

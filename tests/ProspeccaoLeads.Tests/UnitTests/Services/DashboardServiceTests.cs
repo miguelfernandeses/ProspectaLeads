@@ -28,16 +28,16 @@ public class DashboardServiceTests
         // Arrange: 10 leads no total, 2 clientes conquistados -> Conversão = 20.0%
         var leads = new List<Lead>
         {
-            new() { Id = Guid.NewGuid(), UserId = _userId, Nome = "L1", Status = StatusLead.Novo },
-            new() { Id = Guid.NewGuid(), UserId = _userId, Nome = "L2", Status = StatusLead.Contatado },
-            new() { Id = Guid.NewGuid(), UserId = _userId, Nome = "L3", Status = StatusLead.EmNegociacao },
-            new() { Id = Guid.NewGuid(), UserId = _userId, Nome = "L4", Status = StatusLead.Cliente },
-            new() { Id = Guid.NewGuid(), UserId = _userId, Nome = "L5", Status = StatusLead.Cliente },
-            new() { Id = Guid.NewGuid(), UserId = _userId, Nome = "L6", Status = StatusLead.Interessado },
-            new() { Id = Guid.NewGuid(), UserId = _userId, Nome = "L7", Status = StatusLead.Novo },
-            new() { Id = Guid.NewGuid(), UserId = _userId, Nome = "L8", Status = StatusLead.Novo },
-            new() { Id = Guid.NewGuid(), UserId = _userId, Nome = "L9", Status = StatusLead.SemInteresse },
-            new() { Id = Guid.NewGuid(), UserId = _userId, Nome = "L10", Status = StatusLead.Novo }
+            new(_userId, "L1", status: StatusLead.Novo),
+            new(_userId, "L2", status: StatusLead.Contatado),
+            new(_userId, "L3", status: StatusLead.EmNegociacao),
+            new(_userId, "L4", status: StatusLead.Cliente),
+            new(_userId, "L5", status: StatusLead.Cliente),
+            new(_userId, "L6", status: StatusLead.Interessado),
+            new(_userId, "L7", status: StatusLead.Novo),
+            new(_userId, "L8", status: StatusLead.Novo),
+            new(_userId, "L9", status: StatusLead.SemInteresse),
+            new(_userId, "L10", status: StatusLead.Novo)
         };
 
         var history = new List<SearchHistory>
