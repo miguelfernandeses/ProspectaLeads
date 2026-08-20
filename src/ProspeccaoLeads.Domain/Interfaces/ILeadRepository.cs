@@ -35,4 +35,5 @@ public interface ILeadRepository
     Task<Lead> AddAsync(Lead lead, CancellationToken ct = default);
     Task UpdateAsync(Lead lead, CancellationToken ct = default);
     Task DeleteAsync(Lead lead, CancellationToken ct = default);
+    Task<ProspeccaoLeads.Domain.DTOs.DashboardLeadStats> GetDashboardStatsAsync(Guid userId, CancellationToken ct = default);
 }

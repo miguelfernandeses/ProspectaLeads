@@ -26,18 +26,17 @@ public class DashboardServiceTests
     public async Task ObterResumoAsync_DeveCalcularTaxaDeConversaoCorretamente()
     {
         // Arrange: 10 leads no total, 2 clientes conquistados -> Conversão = 20.0%
-        var leads = new List<Lead>
+        var stats = new ProspeccaoLeads.Domain.DTOs.DashboardLeadStats
         {
-            new(_userId, "L1", status: StatusLead.Novo),
-            new(_userId, "L2", status: StatusLead.Contatado),
-            new(_userId, "L3", status: StatusLead.EmNegociacao),
-            new(_userId, "L4", status: StatusLead.Cliente),
-            new(_userId, "L5", status: StatusLead.Cliente),
-            new(_userId, "L6", status: StatusLead.Interessado),
-            new(_userId, "L7", status: StatusLead.Novo),
-            new(_userId, "L8", status: StatusLead.Novo),
-            new(_userId, "L9", status: StatusLead.SemInteresse),
-            new(_userId, "L10", status: StatusLead.Novo)
+            TotalSalvos = 10,
+            ClientesConquistados = 2,
+            Contatados = 1,
+            EmNegociacao = 1,
+            NovosHoje = 3,
+            LeadsPorNicho = new() { new() { Key = "Dentistas", Count = 5 } },
+            LeadsPorCidade = new() { new() { Key = "São Paulo", Count = 10 } },
+            LeadsPorStatus = new() { { StatusLead.Novo, 6 }, { StatusLead.Cliente, 2 } },
+            EvolucaoMensal = new() { new() { Year = DateTime.UtcNow.Year, Month = DateTime.UtcNow.Month, TotalCreated = 10, TotalConverted = 2 } }
         };
 
         var history = new List<SearchHistory>
@@ -45,7 +44,7 @@ public class DashboardServiceTests
             new() { Id = Guid.NewGuid(), UserId = _userId, Niche = "Dentistas", Location = "SP", ResultCount = 50 }
         };
 
-        _leadRepoMock.Setup(r => r.GetAllAsync(_userId, It.IsAny<CancellationToken>())).ReturnsAsync(leads);
+        _leadRepoMock.Setup(r => r.GetDashboardStatsAsync(_userId, It.IsAny<CancellationToken>())).ReturnsAsync(stats);
         _historyRepoMock.Setup(r => r.GetByUserIdAsync(_userId, 500, It.IsAny<CancellationToken>())).ReturnsAsync(history);
 
         // Act
@@ -64,8 +63,10 @@ public class DashboardServiceTests
     public async Task ObterResumoAsync_SemLeads_DeveRetornarTaxaZero()
     {
         // Arrange
-        _leadRepoMock.Setup(r => r.GetAllAsync(_userId, It.IsAny<CancellationToken>())).ReturnsAsync(new List<Lead>());
-        _historyRepoMock.Setup(r => r.GetByUserIdAsync(_userId, 500, It.IsAny<CancellationToken>())).ReturnsAsync(new List<SearchHistory>());
+        _leadRepoMock.Setup(r => r.GetDashboardStatsAsync(_userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ProspeccaoLeads.Domain.DTOs.DashboardLeadStats());
+        _historyRepoMock.Setup(r => r.GetByUserIdAsync(_userId, 500, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<SearchHistory>());
 
         // Act
         var result = await _service.ObterResumoAsync(_userId);

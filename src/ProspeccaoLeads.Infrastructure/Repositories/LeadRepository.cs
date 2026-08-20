@@ -107,6 +107,83 @@ public class LeadRepository : ILeadRepository
         await _context.SaveChangesAsync(ct);
     }
 
+    public async Task<ProspeccaoLeads.Domain.DTOs.DashboardLeadStats> GetDashboardStatsAsync(Guid userId, CancellationToken ct = default)
+    {
+        var userLeads = _context.Leads.AsNoTracking().Where(l => l.UserId == userId);
+        var hoje = DateTime.UtcNow.Date;
+
+        var totalSalvos = await userLeads.CountAsync(ct);
+        var contatados = await userLeads.CountAsync(l => l.Status == StatusLead.Contatado, ct);
+        var emNegociacao = await userLeads.CountAsync(l => l.Status == StatusLead.EmNegociacao, ct);
+        var clientes = await userLeads.CountAsync(l => l.Status == StatusLead.Cliente, ct);
+        var novosHoje = await userLeads.CountAsync(l => l.CreatedAt >= hoje, ct);
+
+        var nichos = await userLeads
+            .GroupBy(l => string.IsNullOrEmpty(l.Categoria) ? "Não categorizado" : l.Categoria)
+            .Select(g => new ProspeccaoLeads.Domain.DTOs.GroupCountItem
+            {
+                Key = g.Key,
+                Count = g.Count()
+            })
+            .OrderByDescending(x => x.Count)
+            .Take(6)
+            .ToListAsync(ct);
+
+        var cidades = await userLeads
+            .GroupBy(l => string.IsNullOrEmpty(l.Cidade) ? "Não informada" : l.Cidade)
+            .Select(g => new ProspeccaoLeads.Domain.DTOs.GroupCountItem
+            {
+                Key = g.Key,
+                Count = g.Count()
+            })
+            .OrderByDescending(x => x.Count)
+            .Take(6)
+            .ToListAsync(ct);
+
+        var statusMap = await userLeads
+            .GroupBy(l => l.Status)
+            .Select(g => new { Status = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.Status, x => x.Count, ct);
+
+        // Evolução últimos 6 meses
+        var seisMesesAtras = DateTime.UtcNow.AddMonths(-5);
+        var inicioPeriodo = new DateTime(seisMesesAtras.Year, seisMesesAtras.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        var leadsRecentes = await userLeads
+            .Where(l => l.CreatedAt >= inicioPeriodo || l.UpdatedAt >= inicioPeriodo)
+            .Select(l => new { l.CreatedAt, l.UpdatedAt, l.Status })
+            .ToListAsync(ct);
+
+        var evolucao = new List<ProspeccaoLeads.Domain.DTOs.MonthlyEvolutionItem>();
+        for (int i = 5; i >= 0; i--)
+        {
+            var mesRef = DateTime.UtcNow.AddMonths(-i);
+            var totalCriadosMes = leadsRecentes.Count(l => l.CreatedAt.Year == mesRef.Year && l.CreatedAt.Month == mesRef.Month);
+            var totalConvertidosMes = leadsRecentes.Count(l => l.Status == StatusLead.Cliente && l.UpdatedAt.Year == mesRef.Year && l.UpdatedAt.Month == mesRef.Month);
+
+            evolucao.Add(new ProspeccaoLeads.Domain.DTOs.MonthlyEvolutionItem
+            {
+                Year = mesRef.Year,
+                Month = mesRef.Month,
+                TotalCreated = totalCriadosMes,
+                TotalConverted = totalConvertidosMes
+            });
+        }
+
+        return new ProspeccaoLeads.Domain.DTOs.DashboardLeadStats
+        {
+            TotalSalvos = totalSalvos,
+            Contatados = contatados,
+            EmNegociacao = emNegociacao,
+            ClientesConquistados = clientes,
+            NovosHoje = novosHoje,
+            LeadsPorNicho = nichos,
+            LeadsPorCidade = cidades,
+            LeadsPorStatus = statusMap,
+            EvolucaoMensal = evolucao
+        };
+    }
+
     private static IQueryable<Lead> ApplyFilters(
         IQueryable<Lead> query,
         string? search,

@@ -18,16 +18,12 @@ public class DashboardService : IDashboardService
 
     public async Task<DashboardSummaryDto> ObterResumoAsync(Guid userId, CancellationToken ct = default)
     {
-        var leads = await _leadRepository.GetAllAsync(userId, ct);
+        var stats = await _leadRepository.GetDashboardStatsAsync(userId, ct);
         var historico = await _historyRepository.GetByUserIdAsync(userId, 500, ct);
 
         var totalEncontrados = historico.Sum(h => h.ResultCount);
-        var totalSalvos = leads.Count;
-        var contatados = leads.Count(l => l.Status == StatusLead.Contatado);
-        var emNegociacao = leads.Count(l => l.Status == StatusLead.EmNegociacao);
-        var clientes = leads.Count(l => l.Status == StatusLead.Cliente);
-        var hoje = DateTime.UtcNow.Date;
-        var novosHoje = leads.Count(l => l.CreatedAt.Date == hoje);
+        var totalSalvos = stats.TotalSalvos;
+        var clientes = stats.ClientesConquistados;
 
         decimal taxaConversao = 0;
         if (totalSalvos > 0)
@@ -36,88 +32,60 @@ public class DashboardService : IDashboardService
         }
 
         // Gráfico: Leads por Nicho
-        var leadsPorNicho = leads
-            .GroupBy(l => string.IsNullOrWhiteSpace(l.Categoria) ? "Não categorizado" : l.Categoria.Trim())
-            .OrderByDescending(g => g.Count())
-            .Take(6)
-            .Select((g, i) => new ChartItemDto
+        var leadsPorNicho = stats.LeadsPorNicho
+            .Select((item, i) => new ChartItemDto
             {
-                Label = g.Key,
-                Value = g.Count(),
+                Label = item.Key,
+                Value = item.Count,
                 Color = ObterCorParaIndice(i)
             })
             .ToList();
 
         // Gráfico: Leads por Cidade
-        var leadsPorCidade = leads
-            .GroupBy(l => string.IsNullOrWhiteSpace(l.Cidade) ? "Não informada" : l.Cidade.Trim())
-            .OrderByDescending(g => g.Count())
-            .Take(6)
-            .Select((g, i) => new ChartItemDto
+        var leadsPorCidade = stats.LeadsPorCidade
+            .Select((item, i) => new ChartItemDto
             {
-                Label = g.Key,
-                Value = g.Count(),
+                Label = item.Key,
+                Value = item.Count,
                 Color = ObterCorParaIndice(i)
             })
             .ToList();
 
-        // Gráfico: Leads por Status
-        var statusCores = new Dictionary<StatusLead, string>
-        {
-            { StatusLead.Novo, "#3B82F6" },          // Blue
-            { StatusLead.Interessado, "#8B5CF6" },   // Purple
-            { StatusLead.Contatado, "#F59E0B" },     // Amber
-            { StatusLead.EmNegociacao, "#EC4899" },  // Pink
-            { StatusLead.Cliente, "#10B981" },       // Emerald
-            { StatusLead.SemInteresse, "#6B7280" }   // Gray
-        };
-
-        var statusLabels = new Dictionary<StatusLead, string>
-        {
-            { StatusLead.Novo, "Novo" },
-            { StatusLead.Interessado, "Interessado" },
-            { StatusLead.Contatado, "Contatado" },
-            { StatusLead.EmNegociacao, "Em Negociação" },
-            { StatusLead.Cliente, "Cliente" },
-            { StatusLead.SemInteresse, "Sem Interesse" }
-        };
-
+        // Gráfico: Leads por Status (utilizando StatusLeadExtensions centralizado)
         var leadsPorStatus = Enum.GetValues<StatusLead>()
             .Select(s => new ChartItemDto
             {
-                Label = statusLabels[s],
-                Value = leads.Count(l => l.Status == s),
-                Color = statusCores.GetValueOrDefault(s, "#6366F1")
+                Label = s.ObterLabel(),
+                Value = stats.LeadsPorStatus.GetValueOrDefault(s, 0),
+                Color = s.ObterCorHex()
             })
-            .Where(c => c.Value > 0 || leads.Count == 0)
+            .Where(c => c.Value > 0 || totalSalvos == 0)
             .ToList();
 
         // Gráfico: Evolução Mensal (Últimos 6 meses)
-        var evolucaoMensal = new List<ChartItemDto>();
-        for (int i = 5; i >= 0; i--)
-        {
-            var mesRef = DateTime.UtcNow.AddMonths(-i);
-            var totalMes = leads.Count(l => l.CreatedAt.Year == mesRef.Year && l.CreatedAt.Month == mesRef.Month);
-            var clientesMes = leads.Count(l => l.Status == StatusLead.Cliente && l.UpdatedAt.Year == mesRef.Year && l.UpdatedAt.Month == mesRef.Month);
-
-            evolucaoMensal.Add(new ChartItemDto
+        var evolucaoMensal = stats.EvolucaoMensal
+            .Select(m =>
             {
-                Label = mesRef.ToString("MMM/yy", new System.Globalization.CultureInfo("pt-BR")),
-                Value = totalMes,
-                SecondaryValue = clientesMes,
-                Color = "#6366F1"
-            });
-        }
+                var dt = new DateTime(m.Year, m.Month, 1);
+                return new ChartItemDto
+                {
+                    Label = dt.ToString("MMM/yy", new System.Globalization.CultureInfo("pt-BR")),
+                    Value = m.TotalCreated,
+                    SecondaryValue = m.TotalConverted,
+                    Color = "#6366F1"
+                };
+            })
+            .ToList();
 
         return new DashboardSummaryDto
         {
             TotalEncontrados = totalEncontrados,
             TotalSalvos = totalSalvos,
-            Contatados = contatados,
-            EmNegociacao = emNegociacao,
+            Contatados = stats.Contatados,
+            EmNegociacao = stats.EmNegociacao,
             ClientesConquistados = clientes,
             TaxaConversao = taxaConversao,
-            NovosHoje = novosHoje,
+            NovosHoje = stats.NovosHoje,
             LeadsPorNicho = leadsPorNicho,
             LeadsPorCidade = leadsPorCidade,
             LeadsPorStatus = leadsPorStatus,
