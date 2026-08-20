@@ -24,6 +24,7 @@ public class LeadRepository : ILeadRepository
     public async Task<IReadOnlyList<Lead>> GetAllAsync(Guid userId, CancellationToken ct = default)
     {
         return await _context.Leads
+            .AsNoTracking()
             .Where(l => l.UserId == userId)
             .OrderByDescending(l => l.CreatedAt)
             .ToListAsync(ct);
@@ -44,7 +45,7 @@ public class LeadRepository : ILeadRepository
         int pageSize = 20,
         CancellationToken ct = default)
     {
-        var query = ApplyFilters(_context.Leads.Where(l => l.UserId == userId), search, niche, city, state, status, fromDate, toDate);
+        var query = ApplyFilters(_context.Leads.AsNoTracking().Where(l => l.UserId == userId), search, niche, city, state, status, fromDate, toDate);
 
         // Sorting
         query = (sortBy?.ToLowerInvariant()) switch
@@ -74,13 +75,13 @@ public class LeadRepository : ILeadRepository
         DateTime? toDate = null,
         CancellationToken ct = default)
     {
-        var query = ApplyFilters(_context.Leads.Where(l => l.UserId == userId), search, niche, city, state, status, fromDate, toDate);
+        var query = ApplyFilters(_context.Leads.AsNoTracking().Where(l => l.UserId == userId), search, niche, city, state, status, fromDate, toDate);
         return await query.CountAsync(ct);
     }
 
     public async Task<bool> ExistsByNameAndCityAsync(Guid userId, string name, string? city, CancellationToken ct = default)
     {
-        var query = _context.Leads.Where(l => l.UserId == userId && l.Nome.ToLower() == name.ToLower());
+        var query = _context.Leads.AsNoTracking().Where(l => l.UserId == userId && l.Nome.ToLower() == name.ToLower());
         if (!string.IsNullOrWhiteSpace(city))
         {
             query = query.Where(l => l.Cidade != null && l.Cidade.ToLower() == city.ToLower());

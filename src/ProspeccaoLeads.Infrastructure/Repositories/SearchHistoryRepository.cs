@@ -24,6 +24,7 @@ public class SearchHistoryRepository : ISearchHistoryRepository
     public async Task<IReadOnlyList<SearchHistory>> GetByUserIdAsync(Guid userId, int limit = 50, CancellationToken ct = default)
     {
         return await _context.Searches
+            .AsNoTracking()
             .Where(s => s.UserId == userId)
             .OrderByDescending(s => s.CreatedAt)
             .Take(limit)

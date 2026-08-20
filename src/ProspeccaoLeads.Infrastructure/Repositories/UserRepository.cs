@@ -16,12 +16,12 @@ public class UserRepository : IUserRepository
 
     public async Task<UserProfile?> GetByIdAsync(Guid id, CancellationToken ct = default)
     {
-        return await _context.Users.FirstOrDefaultAsync(u => u.Id == id, ct);
+        return await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == id, ct);
     }
 
     public async Task<UserProfile?> GetByEmailAsync(string email, CancellationToken ct = default)
     {
-        return await _context.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == email.ToLower(), ct);
+        return await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Email.ToLower() == email.ToLower(), ct);
     }
 
     public async Task<UserProfile> AddOrUpdateAsync(UserProfile user, CancellationToken ct = default)

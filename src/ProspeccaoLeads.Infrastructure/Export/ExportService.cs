@@ -8,12 +8,14 @@ public class ExportService : IExportService
 {
     public Task<byte[]> ExportarParaCsvAsync(IEnumerable<LeadDto> leads, CancellationToken ct = default)
     {
+        ct.ThrowIfCancellationRequested();
         var bytes = CsvExporter.Exportar(leads);
         return Task.FromResult(bytes);
     }
 
     public Task<byte[]> ExportarParaExcelAsync(IEnumerable<LeadDto> leads, CancellationToken ct = default)
     {
+        ct.ThrowIfCancellationRequested();
         using var workbook = new XLWorkbook();
         var worksheet = workbook.Worksheets.Add("Meus Leads");
 
