@@ -20,7 +20,7 @@ public class SupabaseAuthService : IAuthService
     private readonly IUserRepository _userRepository;
     private readonly ILogger<SupabaseAuthService> _logger;
 
-    private static UserSessionDto? _currentSession;
+    private UserSessionDto? _currentSession;
 
     public SupabaseAuthService(
         HttpClient httpClient,
@@ -291,7 +291,8 @@ public class SupabaseAuthService : IAuthService
             try
             {
                 var baseUrl = supabaseUrl.Replace("/rest/v1", "").TrimEnd('/');
-                var redirectUrl = "http://localhost:5000/redefinir-senha";
+                var appBaseUrl = (_configuration["App:BaseUrl"] ?? "http://localhost:5000").TrimEnd('/');
+                var redirectUrl = $"{appBaseUrl}/redefinir-senha";
                 var endpoint = $"{baseUrl}/auth/v1/recover?redirect_to={Uri.EscapeDataString(redirectUrl)}";
                 using var request = new HttpRequestMessage(HttpMethod.Post, endpoint);
                 request.Headers.Add("apikey", supabaseKey);
