@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using ProspeccaoLeads.Application.Common.Helpers;
 using ProspeccaoLeads.Domain.Enums;
 
 namespace ProspeccaoLeads.Application.DTOs.Lead;
@@ -35,50 +36,13 @@ public class LeadDto
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 
-    public string StatusFormatado => Status switch
-    {
-        StatusLead.Novo => "Novo",
-        StatusLead.Interessado => "Interessado",
-        StatusLead.Contatado => "Contatado",
-        StatusLead.EmNegociacao => "Em Negociação",
-        StatusLead.Cliente => "Cliente",
-        StatusLead.SemInteresse => "Sem Interesse",
-        _ => Status.ToString()
-    };
+    public string StatusFormatado => Status.ObterLabel();
 
-    public string GetWhatsAppUrl()
-    {
-        var num = WhatsApp ?? Telefone;
-        if (string.IsNullOrWhiteSpace(num)) return string.Empty;
-        var digits = new string(num.Where(char.IsDigit).ToArray());
-        if (digits.Length == 10 || digits.Length == 11)
-        {
-            digits = "55" + digits;
-        }
-        return $"https://wa.me/{digits}";
-    }
+    public string GetWhatsAppUrl() => ExternalLinkHelper.GerarWhatsAppUrl(WhatsApp ?? Telefone);
 
-    public string GetGoogleMapsUrl()
-    {
-        var localParts = new[] { Endereco, Cidade, Estado }
-            .Where(s => !string.IsNullOrWhiteSpace(s) && !s.Equals("Centro", StringComparison.OrdinalIgnoreCase) && !s.Contains("Não informado", StringComparison.OrdinalIgnoreCase));
-        var enderecoCompleto = string.Join(", ", localParts);
+    public string GetGoogleMapsUrl() => ExternalLinkHelper.GerarGoogleMapsUrl(Nome, Endereco, Cidade, Estado);
 
-        var termo = string.IsNullOrWhiteSpace(enderecoCompleto)
-            ? $"{Nome}, {Cidade} - {Estado}".Trim()
-            : $"{Nome}, {enderecoCompleto}".Trim();
-
-        var query = Uri.EscapeDataString(termo);
-        return $"https://www.google.com/maps/search/?api=1&query={query}";
-    }
-
-    public string GetInstagramUrl()
-    {
-        if (string.IsNullOrWhiteSpace(Instagram)) return string.Empty;
-        var handle = Instagram.Trim().TrimStart('@');
-        if (handle.StartsWith("http", StringComparison.OrdinalIgnoreCase)) return handle;
-        return $"https://instagram.com/{handle}";
-    }
+    public string GetInstagramUrl() => ExternalLinkHelper.GerarInstagramUrl(Instagram);
 }
 
 public class CreateLeadDto

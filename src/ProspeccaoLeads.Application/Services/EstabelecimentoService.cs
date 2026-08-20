@@ -9,6 +9,9 @@ namespace ProspeccaoLeads.Application.Services;
 
 public class EstabelecimentoService : IEstabelecimentoService
 {
+    private static readonly TimeSpan CacheDuration = TimeSpan.FromMinutes(30);
+    private const int DefaultMaxResultados = 30;
+
     private readonly IEnumerable<IEstabelecimentoProvider> _providers;
     private readonly ILeadRepository _leadRepository;
     private readonly ISearchHistoryService _historyService;
@@ -46,35 +49,15 @@ public class EstabelecimentoService : IEstabelecimentoService
 
         var nicho = dto.Nicho.Trim();
         var localizacao = dto.Localizacao.Trim();
-        var maxResultados = dto.MaxResultados > 0 ? dto.MaxResultados : 30;
+        var maxResultados = dto.MaxResultados > 0 ? dto.MaxResultados : DefaultMaxResultados;
 
         List<EstabelecimentoDto> resultados = new();
-        string? provedorUtilizado = null;
 
         var cacheKey = $"search_{nicho.ToLowerInvariant()}_{localizacao.ToLowerInvariant()}";
         if (_memoryCache.TryGetValue(cacheKey, out List<EstabelecimentoDto>? cachedResultados) && cachedResultados != null && cachedResultados.Count > 0)
         {
             _logger.LogInformation("Retornando {Count} resultados do cache em memória para '{Nicho}' em '{Loc}'", cachedResultados.Count, nicho, localizacao);
-            resultados = cachedResultados.Select(c => new EstabelecimentoDto
-            {
-                Nome = c.Nome,
-                Categoria = c.Categoria,
-                Telefone = c.Telefone,
-                WhatsApp = c.WhatsApp,
-                Email = c.Email,
-                Endereco = c.Endereco,
-                Cidade = c.Cidade,
-                Estado = c.Estado,
-                CEP = c.CEP,
-                Website = c.Website,
-                Instagram = c.Instagram,
-                Avaliacao = c.Avaliacao,
-                QuantidadeAvaliacoes = c.QuantidadeAvaliacoes,
-                Latitude = c.Latitude,
-                Longitude = c.Longitude,
-                Fonte = c.Fonte,
-                Observacoes = c.Observacoes
-            }).ToList();
+            resultados = ClonarResultados(cachedResultados);
         }
         else
         {
@@ -91,7 +74,6 @@ public class EstabelecimentoService : IEstabelecimentoService
                         if (itens != null && itens.Count > 0)
                         {
                             resultados = itens;
-                            provedorUtilizado = provider.NomeProvedor;
                             _logger.LogInformation("Provedor {ProviderName} retornou {Count} estabelecimentos.", provider.NomeProvedor, itens.Count);
                             break;
                         }
@@ -105,7 +87,7 @@ public class EstabelecimentoService : IEstabelecimentoService
 
             if (resultados.Count > 0)
             {
-                _memoryCache.Set(cacheKey, resultados, TimeSpan.FromMinutes(30));
+                _memoryCache.Set(cacheKey, resultados, CacheDuration);
             }
         }
 
@@ -146,5 +128,29 @@ public class EstabelecimentoService : IEstabelecimentoService
         await _historyService.RegistrarBuscaAsync(userId, nicho, localizacao, resultados.Count, ct);
 
         return Result<List<EstabelecimentoDto>>.Success(resultados);
+    }
+
+    private static List<EstabelecimentoDto> ClonarResultados(IEnumerable<EstabelecimentoDto> lista)
+    {
+        return lista.Select(c => new EstabelecimentoDto
+        {
+            Nome = c.Nome,
+            Categoria = c.Categoria,
+            Telefone = c.Telefone,
+            WhatsApp = c.WhatsApp,
+            Email = c.Email,
+            Endereco = c.Endereco,
+            Cidade = c.Cidade,
+            Estado = c.Estado,
+            CEP = c.CEP,
+            Website = c.Website,
+            Instagram = c.Instagram,
+            Avaliacao = c.Avaliacao,
+            QuantidadeAvaliacoes = c.QuantidadeAvaliacoes,
+            Latitude = c.Latitude,
+            Longitude = c.Longitude,
+            Fonte = c.Fonte,
+            Observacoes = c.Observacoes
+        }).ToList();
     }
 }

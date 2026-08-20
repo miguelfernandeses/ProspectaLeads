@@ -2,6 +2,7 @@ using ProspeccaoLeads.Application.Common;
 using ProspeccaoLeads.Application.DTOs.Estabelecimento;
 using ProspeccaoLeads.Application.DTOs.Lead;
 using ProspeccaoLeads.Application.Interfaces;
+using ProspeccaoLeads.Application.Mappings;
 using ProspeccaoLeads.Domain.Entities;
 using ProspeccaoLeads.Domain.Enums;
 using ProspeccaoLeads.Domain.Interfaces;
@@ -20,7 +21,7 @@ public class LeadService : ILeadService
     public async Task<IReadOnlyList<LeadDto>> ObterTodosAsync(Guid userId, CancellationToken ct = default)
     {
         var leads = await _leadRepository.GetAllAsync(userId, ct);
-        return leads.Select(MapToDto).ToList();
+        return leads.Select(l => l.ToDto()).ToList();
     }
 
     public async Task<PagedResultDto<LeadDto>> ObterPaginadoAsync(Guid userId, LeadFilterDto filter, CancellationToken ct = default)
@@ -53,7 +54,7 @@ public class LeadService : ILeadService
 
         return new PagedResultDto<LeadDto>
         {
-            Items = items.Select(MapToDto).ToList(),
+            Items = items.Select(l => l.ToDto()).ToList(),
             TotalCount = totalCount,
             Page = filter.Page,
             PageSize = filter.PageSize
@@ -63,7 +64,7 @@ public class LeadService : ILeadService
     public async Task<LeadDto?> ObterPorIdAsync(Guid id, Guid userId, CancellationToken ct = default)
     {
         var lead = await _leadRepository.GetByIdAsync(id, userId, ct);
-        return lead == null ? null : MapToDto(lead);
+        return lead?.ToDto();
     }
 
     public async Task<Result<LeadDto>> CriarAsync(CreateLeadDto dto, CancellationToken ct = default)
@@ -102,34 +103,12 @@ public class LeadService : ILeadService
         );
 
         var created = await _leadRepository.AddAsync(lead, ct);
-        return Result<LeadDto>.Success(MapToDto(created));
+        return Result<LeadDto>.Success(created.ToDto());
     }
 
     public async Task<Result<LeadDto>> SalvarEstabelecimentoAsync(EstabelecimentoDto estabelecimento, Guid userId, CancellationToken ct = default)
     {
-        var dto = new CreateLeadDto
-        {
-            UserId = userId,
-            Nome = estabelecimento.Nome,
-            Categoria = estabelecimento.Categoria,
-            Telefone = estabelecimento.Telefone,
-            WhatsApp = estabelecimento.WhatsApp,
-            Email = estabelecimento.Email,
-            Endereco = estabelecimento.Endereco,
-            Cidade = estabelecimento.Cidade,
-            Estado = estabelecimento.Estado,
-            CEP = estabelecimento.CEP,
-            Website = estabelecimento.Website,
-            Instagram = estabelecimento.Instagram,
-            Avaliacao = estabelecimento.Avaliacao,
-            QuantidadeAvaliacoes = estabelecimento.QuantidadeAvaliacoes,
-            Latitude = estabelecimento.Latitude,
-            Longitude = estabelecimento.Longitude,
-            Observacoes = estabelecimento.Observacoes,
-            Status = StatusLead.Novo,
-            Fonte = estabelecimento.Fonte
-        };
-
+        var dto = estabelecimento.ToCreateDto(userId);
         return await CriarAsync(dto, ct);
     }
 
@@ -210,33 +189,5 @@ public class LeadService : ILeadService
     {
         return await _leadRepository.ExistsByNameAndCityAsync(userId, nome.Trim(), cidade?.Trim(), ct);
     }
-
-    private static LeadDto MapToDto(Lead lead)
-    {
-        return new LeadDto
-        {
-            Id = lead.Id,
-            UserId = lead.UserId,
-            Nome = lead.Nome,
-            Categoria = lead.Categoria,
-            Telefone = lead.Telefone,
-            WhatsApp = lead.WhatsApp,
-            Email = lead.Email,
-            Endereco = lead.Endereco,
-            Cidade = lead.Cidade,
-            Estado = lead.Estado,
-            CEP = lead.CEP,
-            Website = lead.Website,
-            Instagram = lead.Instagram,
-            Avaliacao = lead.Avaliacao,
-            QuantidadeAvaliacoes = lead.QuantidadeAvaliacoes,
-            Latitude = lead.Latitude,
-            Longitude = lead.Longitude,
-            Observacoes = lead.Observacoes,
-            Status = lead.Status,
-            Fonte = lead.Fonte,
-            CreatedAt = lead.CreatedAt,
-            UpdatedAt = lead.UpdatedAt
-        };
-    }
 }
+

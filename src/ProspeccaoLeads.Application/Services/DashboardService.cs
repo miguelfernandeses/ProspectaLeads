@@ -93,19 +93,17 @@ public class DashboardService : IDashboardService
         };
     }
 
-    private static string ObterCorParaIndice(int index)
-    {
-        var cores = new[]
-        {
-            "#6366F1", // Indigo
-            "#10B981", // Emerald
-            "#F59E0B", // Amber
-            "#EC4899", // Pink
-            "#8B5CF6", // Violet
-            "#06B6D4", // Cyan
-            "#F97316", // Orange
-            "#14B8A6"  // Teal
-        };
-        return cores[index % cores.Length];
-    }
+    private static readonly string[] ChartColors =
+    [
+        "#6366F1", // Indigo
+        "#10B981", // Emerald
+        "#F59E0B", // Amber
+        "#EC4899", // Pink
+        "#8B5CF6", // Violet
+        "#06B6D4", // Cyan
+        "#F97316", // Orange
+        "#14B8A6"  // Teal
+    ];
+
+    private static string ObterCorParaIndice(int index) => ChartColors[index % ChartColors.Length];
 }
