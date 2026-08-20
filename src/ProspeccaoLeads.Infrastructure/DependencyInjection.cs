@@ -58,9 +58,13 @@ public static class DependencyInjection
         services.AddScoped<IEstabelecimentoProvider, OpenStreetMapProvider>();
         services.AddScoped<IEstabelecimentoProvider, BrazilianDirectoryPlacesProvider>();
 
-        // 4. Exportação & Autenticação
+        // 4. Exportação & Autenticação (registrando interfaces segregadas e agregada)
         services.AddScoped<IExportService, ExportService>();
-        services.AddScoped<IAuthService, SupabaseAuthService>();
+        services.AddScoped<SupabaseAuthService>();
+        services.AddScoped<IAuthService>(sp => sp.GetRequiredService<SupabaseAuthService>());
+        services.AddScoped<IAuthenticationService>(sp => sp.GetRequiredService<SupabaseAuthService>());
+        services.AddScoped<IPasswordManagementService>(sp => sp.GetRequiredService<SupabaseAuthService>());
+        services.AddScoped<IUserProfileService>(sp => sp.GetRequiredService<SupabaseAuthService>());
 
         return services;
     }
