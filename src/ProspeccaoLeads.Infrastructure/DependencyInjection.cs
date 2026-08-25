@@ -47,16 +47,21 @@ public static class DependencyInjection
         services.AddScoped<ISearchHistoryRepository, SearchHistoryRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
 
-        // 3. Provedores de Estabelecimentos Reais (Prioridade: Real Places / Google Places / OSM / Catálogo Comercial)
+        // 3. Provedores de Estabelecimentos Reais (Prioridade: Apify Google Maps / Catálogo Comercial / Google Places / OSM)
+        services.AddHttpClient<ApifyGoogleMapsProvider>(client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(120);
+        });
         services.AddHttpClient<RealWebPlacesProvider>();
         services.AddHttpClient<GooglePlacesProvider>();
         services.AddHttpClient<OpenStreetMapProvider>();
         services.AddHttpClient<SupabaseAuthService>();
 
-        services.AddScoped<IEstabelecimentoProvider, RealWebPlacesProvider>();
-        services.AddScoped<IEstabelecimentoProvider, GooglePlacesProvider>();
-        services.AddScoped<IEstabelecimentoProvider, OpenStreetMapProvider>();
+        services.AddScoped<IEstabelecimentoProvider, ApifyGoogleMapsProvider>();
         services.AddScoped<IEstabelecimentoProvider, BrazilianDirectoryPlacesProvider>();
+        services.AddScoped<IEstabelecimentoProvider, GooglePlacesProvider>();
+        services.AddScoped<IEstabelecimentoProvider, RealWebPlacesProvider>();
+        services.AddScoped<IEstabelecimentoProvider, OpenStreetMapProvider>();
 
         // 4. Exportação & Autenticação (registrando interfaces segregadas e agregada)
         services.AddScoped<IExportService, ExportService>();

@@ -1,9 +1,11 @@
 @page "/configuracoes"
+@using Microsoft.Extensions.Configuration
 @using ProspeccaoLeads.Application.DTOs.Auth
 @using ProspeccaoLeads.Application.Interfaces
 @using ProspeccaoLeads.Web.Services
 @inject IAuthService AuthService
 @inject CustomAuthenticationStateProvider AuthStateProvider
+@inject IConfiguration Configuration
 @inject ToastService ToastService
 @inject NavigationManager Navigation
 
@@ -207,7 +209,86 @@
         </div>
     </div>
 
-    <!-- 4. Sessão & Logout -->
+    <!-- 4. Integração Google Maps & Web Scraping (Apify) -->
+    <div class="card-glass" style="border-color: rgba(99, 102, 241, 0.35);">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+            <div>
+                <h3 style="font-size: 1.15rem; color: var(--text-primary); margin: 0; display: flex; align-items: center; gap: 8px;">
+                    <svg width="20" height="20" fill="none" stroke="var(--primary)" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                    Google Maps Real em Tempo Real (via Apify Scraper)
+                </h3>
+                <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 4px;">
+                    Conecte o Apify para extrair dados 100% reais diretamente do Google Maps (com telefones, endereços e redes sociais).
+                </p>
+            </div>
+            @if (!string.IsNullOrWhiteSpace(_apifyToken) && !_apifyToken.Contains("SEU_TOKEN"))
+            {
+                <span class="status-badge status-cliente" style="display: flex; align-items: center; gap: 6px;">
+                    <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--success);"></span>
+                    Conectado ao Google Maps
+                </span>
+            }
+            else
+            {
+                <span class="status-badge" style="background: rgba(255,255,255,0.08); color: var(--text-muted);">
+                    Não configurado (Usando Catálogo Interno)
+                </span>
+            }
+        </div>
+
+        <div style="background: rgba(99, 102, 241, 0.06); border-radius: var(--radius-md); padding: 14px; border: 1px solid rgba(99, 102, 241, 0.15); margin-bottom: 18px; font-size: 0.82rem; color: var(--text-secondary); line-height: 1.5;">
+            ✨ <strong>Como funciona o Apify?</strong> O Apify oferece <strong>$5 dólares gratuitos todo mês</strong> no plano gratuito (~2.000 buscas reais sem pagar nada).
+            <div style="margin-top: 6px;">
+                1. Crie sua conta gratuita em <a href="https://console.apify.com/sign-up" target="_blank" style="color: var(--primary); text-decoration: underline; font-weight: 600;">console.apify.com</a>.<br />
+                2. Copie seu <strong>API Token</strong> em <em>Settings &gt; Integrations &gt; API Tokens</em> e cole abaixo.
+            </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 16px;">
+            <label class="form-label" style="display: flex; justify-content: space-between; align-items: center;">
+                <span>Apify Personal API Token</span>
+                <a href="https://console.apify.com/account/integrations" target="_blank" style="font-size: 0.78rem; color: var(--primary); text-decoration: none;">
+                    Obter Token no Apify ↗
+                </a>
+            </label>
+            <div style="position: relative;">
+                <input type="@(_mostrarApifyToken ? "text" : "password")" 
+                       class="form-control-custom" 
+                       placeholder="apify_api_xxxxxxxxxxxxxxxxxxxxxxxxx" 
+                       @bind="_apifyToken" 
+                       style="padding-right: 44px; font-family: monospace;" />
+                <button type="button" 
+                        @onclick="() => _mostrarApifyToken = !_mostrarApifyToken"
+                        style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 4px;">
+                    @if (_mostrarApifyToken)
+                    {
+                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18"></path>
+                        </svg>
+                    }
+                    else
+                    {
+                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                        </svg>
+                    }
+                </button>
+            </div>
+        </div>
+
+        <button type="button" class="btn-modern btn-primary" style="font-weight: 700;" @onclick="HandleSaveApifyToken">
+            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            <span>Salvar Chave do Apify</span>
+        </button>
+    </div>
+
+    <!-- 5. Sessão & Logout -->
     <div class="card-glass" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; border-color: rgba(239, 68, 68, 0.25);">
         <div>
             <h3 style="font-size: 1.05rem; color: var(--text-primary); margin: 0;">Sessão da Conta</h3>
@@ -235,6 +316,9 @@
     private string _defaultState = "SP";
     private string _defaultRadius = "15";
 
+    private string _apifyToken = string.Empty;
+    private bool _mostrarApifyToken = false;
+
     private bool _isSavingProfile = false;
     private bool _isSavingPassword = false;
 
@@ -248,6 +332,27 @@
         }
 
         _profileModel.Name = _session.Name;
+
+        _apifyToken = Configuration["Apify:ApiToken"] ?? 
+                      Environment.GetEnvironmentVariable("APIFY_API_TOKEN") ?? 
+                      Environment.GetEnvironmentVariable("Apify__ApiToken") ?? 
+                      "";
+    }
+
+    private void HandleSaveApifyToken()
+    {
+        var token = _apifyToken?.Trim() ?? "";
+        Environment.SetEnvironmentVariable("APIFY_API_TOKEN", token);
+        Configuration["Apify:ApiToken"] = token;
+
+        if (!string.IsNullOrWhiteSpace(token))
+        {
+            ToastService.ShowSuccess("Chave do Apify (Google Maps) configurada com sucesso!");
+        }
+        else
+        {
+            ToastService.ShowInfo("Chave do Apify removida. O sistema usará o catálogo e provedores padrão.");
+        }
     }
 
     private string ObterIniciais(string? nome)
