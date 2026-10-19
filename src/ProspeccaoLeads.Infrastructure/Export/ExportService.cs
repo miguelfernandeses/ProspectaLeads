@@ -68,7 +68,11 @@ public class ExportService : IExportService
             row++;
         }
 
-        worksheet.Columns().AdjustToContents(10.0, 50.0);
+        var widths = new[] { 28d, 22, 18, 18, 28, 36, 20, 8, 14, 32, 22, 12, 14, 18, 22, 40, 20 };
+        for (var column = 1; column <= widths.Length; column++)
+        {
+            worksheet.Column(column).Width = widths[column - 1];
+        }
 
         using var ms = new MemoryStream();
         workbook.SaveAs(ms);

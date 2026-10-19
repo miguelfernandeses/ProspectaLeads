@@ -9,15 +9,18 @@ public static class DatabaseSeeder
 {
     public static readonly Guid DemoUserId = Guid.Parse("11111111-1111-1111-1111-111111111111");
 
-    public static async Task InitializeAsync(AppDbContext dbContext, ILogger logger, CancellationToken ct = default)
+    public static async Task InitializeAsync(
+        AppDbContext dbContext,
+        ILogger logger,
+        bool seedDemoData = false,
+        CancellationToken ct = default)
     {
         try
         {
             // Cria tabelas no PostgreSQL/Supabase ou SQLite caso não existam
             await dbContext.Database.EnsureCreatedAsync(ct);
 
-            // Garante existência do usuário administrador padrão
-            if (!await dbContext.Users.AnyAsync(u => u.Id == DemoUserId, ct))
+            if (seedDemoData && !await dbContext.Users.AnyAsync(u => u.Id == DemoUserId, ct))
             {
                 await dbContext.Users.AddAsync(new UserProfile
                 {
@@ -29,8 +32,7 @@ public static class DatabaseSeeder
                 await dbContext.SaveChangesAsync(ct);
             }
 
-            // Seed demonstrativo apenas para SQLite local se a base de leads estiver vazia
-            if (dbContext.Database.IsSqlite())
+            if (seedDemoData && dbContext.Database.IsSqlite())
             {
                 if (!await dbContext.Leads.AnyAsync(l => l.UserId == DemoUserId, ct))
                 {
