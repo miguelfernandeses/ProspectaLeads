@@ -7,6 +7,7 @@
 @inject CustomAuthenticationStateProvider AuthStateProvider
 @inject NavigationManager Navigation
 @inject ToastService ToastService
+@inject IConfiguration Configuration
 
 <div class="card-glass" style="padding: 32px;">
     <h2 style="font-size: 1.35rem; margin-bottom: 8px; color: var(--text-primary);">Acessar Conta</h2>
@@ -24,7 +25,10 @@
         <div class="form-group">
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <label class="form-label" style="margin: 0;">Senha</label>
-                <a href="recuperar-senha" style="color: var(--primary); font-size: 0.8rem; text-decoration: none;">Esqueceu a senha?</a>
+                @if (!IsLocalMode)
+                {
+                    <a href="recuperar-senha" style="color: var(--primary); font-size: 0.8rem; text-decoration: none;">Esqueceu a senha?</a>
+                }
             </div>
             <InputText type="password" class="form-control-custom" placeholder="••••••••" @bind-Value="_model.Password" />
             <ValidationMessage For="() => _model.Password" style="color: var(--danger); font-size: 0.8rem; margin-top: 4px;" />
@@ -43,14 +47,25 @@
         </button>
     </EditForm>
 
-    <div style="text-align: center; margin-top: 24px; font-size: 0.88rem; color: var(--text-secondary);">
-        Não possui uma conta? <a href="cadastro" style="color: var(--primary); font-weight: 600; text-decoration: none;">Cadastre-se agora</a>
-    </div>
+    @if (!IsLocalMode)
+    {
+        <div style="text-align: center; margin-top: 24px; font-size: 0.88rem; color: var(--text-secondary);">
+            Não possui uma conta? <a href="cadastro" style="color: var(--primary); font-weight: 600; text-decoration: none;">Cadastre-se agora</a>
+        </div>
+    }
 </div>
 
 @code {
     private readonly LoginDto _model = new();
     private bool _isLoading = false;
+    private bool IsLocalMode => string.Equals(
+        Configuration["Authentication:Mode"],
+        "Local",
+        StringComparison.OrdinalIgnoreCase);
+
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "returnUrl")]
+    public string? ReturnUrl { get; set; }
 
     private async Task HandleLogin()
     {
@@ -62,7 +77,7 @@
             {
                 AuthStateProvider.NotifyUserAuthentication(result.Value);
                 ToastService.ShowSuccess($"Bem-vindo de volta, {result.Value.Name}!");
-                Navigation.NavigateTo("");
+                Navigation.NavigateTo(GetSafeDestination());
             }
             else
             {
@@ -73,5 +88,16 @@
         {
             _isLoading = false;
         }
+    }
+
+    private string GetSafeDestination()
+    {
+        if (string.IsNullOrWhiteSpace(ReturnUrl) ||
+            Uri.TryCreate(ReturnUrl, UriKind.Absolute, out _))
+        {
+            return "";
+        }
+
+        return ReturnUrl.TrimStart('/');
     }
 }

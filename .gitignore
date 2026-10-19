@@ -10,6 +10,7 @@ obj/
 .env.local
 .env.*.local
 *.local.json
+.data-protection-keys/
 
 # SQLite local databases
 *.db

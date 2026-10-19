@@ -3,6 +3,13 @@ using ProspeccaoLeads.Application.DTOs.Auth;
 
 namespace ProspeccaoLeads.Application.Interfaces;
 
+public interface IUserSessionStore
+{
+    Task<UserSessionDto?> LoadAsync(CancellationToken ct = default);
+    Task SaveAsync(UserSessionDto session, CancellationToken ct = default);
+    Task ClearAsync(CancellationToken ct = default);
+}
+
 public interface IAuthenticationService
 {
     Task<Result<UserSessionDto>> LoginAsync(LoginDto dto, CancellationToken ct = default);

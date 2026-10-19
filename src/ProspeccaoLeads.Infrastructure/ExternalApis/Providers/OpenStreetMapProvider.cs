@@ -22,7 +22,7 @@ public class OpenStreetMapProvider : IEstabelecimentoProvider
         _logger = logger;
         if (!_httpClient.DefaultRequestHeaders.Contains("User-Agent"))
         {
-            _httpClient.DefaultRequestHeaders.Add("User-Agent", "ProspeccaoLeadsApp/1.0 (contact@prospeccaoleads.com)");
+            _httpClient.DefaultRequestHeaders.Add("User-Agent", "ProspectAI/1.0");
         }
     }
 
@@ -84,7 +84,7 @@ public class OpenStreetMapProvider : IEstabelecimentoProvider
 
             if (!geoEncontrado)
             {
-                var fallbackCoords = ObterCoordenadasConhecidas(cidade, estado);
+                var fallbackCoords = ObterCoordenadasConhecidas(cidade);
                 if (fallbackCoords.HasValue)
                 {
                     centerLat = fallbackCoords.Value.Lat;
@@ -229,8 +229,6 @@ public class OpenStreetMapProvider : IEstabelecimentoProvider
                     CEP = postcode,
                     Website = website,
                     Instagram = instagram,
-                    Avaliacao = 4.5m + (decimal)(Random.Shared.Next(0, 5) * 0.1),
-                    QuantidadeAvaliacoes = Random.Shared.Next(12, 180),
                     Latitude = lat,
                     Longitude = lon,
                     Fonte = "OpenStreetMap",
@@ -297,7 +295,7 @@ public class OpenStreetMapProvider : IEstabelecimentoProvider
         return "[\"name\"]";
     }
 
-    private static (double Lat, double Lon)? ObterCoordenadasConhecidas(string cidade, string estado)
+    private static (double Lat, double Lon)? ObterCoordenadasConhecidas(string cidade)
     {
         var c = cidade.ToLowerInvariant().Trim();
         if (c.Contains("araras")) return (-22.3572, -47.3842);
@@ -306,16 +304,16 @@ public class OpenStreetMapProvider : IEstabelecimentoProvider
         if (c.Contains("limeira")) return (-22.5647, -47.4017);
         if (c.Contains("piracicaba")) return (-22.7253, -47.6492);
         if (c.Contains("campinas")) return (-22.9099, -47.0626);
-        if (c.Contains("são paulo") || estado.Equals("SP", StringComparison.OrdinalIgnoreCase)) return (-23.5505, -46.6333);
+        if (c.Contains("são paulo")) return (-23.5505, -46.6333);
         if (c.Contains("santos")) return (-23.9618, -46.3322);
-        if (c.Contains("curitiba") || estado.Equals("PR", StringComparison.OrdinalIgnoreCase)) return (-25.4284, -49.2733);
-        if (c.Contains("belo horizonte") || estado.Equals("MG", StringComparison.OrdinalIgnoreCase)) return (-19.9167, -43.9345);
-        if (c.Contains("rio de janeiro") || estado.Equals("RJ", StringComparison.OrdinalIgnoreCase)) return (-22.9068, -43.1729);
-        if (c.Contains("brasília") || estado.Equals("DF", StringComparison.OrdinalIgnoreCase)) return (-15.7975, -47.8919);
-        if (c.Contains("salvador") || estado.Equals("BA", StringComparison.OrdinalIgnoreCase)) return (-12.9777, -38.5016);
-        if (c.Contains("porto alegre") || estado.Equals("RS", StringComparison.OrdinalIgnoreCase)) return (-30.0346, -51.2177);
+        if (c.Contains("curitiba")) return (-25.4284, -49.2733);
+        if (c.Contains("belo horizonte")) return (-19.9167, -43.9345);
+        if (c.Contains("rio de janeiro")) return (-22.9068, -43.1729);
+        if (c.Contains("brasília")) return (-15.7975, -47.8919);
+        if (c.Contains("salvador")) return (-12.9777, -38.5016);
+        if (c.Contains("porto alegre")) return (-30.0346, -51.2177);
 
-        return (-23.5505, -46.6333);
+        return null;
     }
 
     private static string ExtrairCidade(string localizacao)
