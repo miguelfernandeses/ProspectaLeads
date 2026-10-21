@@ -37,8 +37,9 @@ public static class DotEnvLoader
                     value = value[1..^1];
                 }
 
-                // Define a variável de ambiente se ainda não estiver definida no sistema
-                if (!string.IsNullOrEmpty(key))
+                // Variáveis reais da hospedagem sempre têm prioridade sobre o arquivo local.
+                if (!string.IsNullOrEmpty(key) &&
+                    string.IsNullOrEmpty(Environment.GetEnvironmentVariable(key)))
                 {
                     Environment.SetEnvironmentVariable(key, value);
                 }

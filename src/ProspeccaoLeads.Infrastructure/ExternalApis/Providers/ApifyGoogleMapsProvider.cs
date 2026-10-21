@@ -67,7 +67,7 @@ public class ApifyGoogleMapsProvider : IEstabelecimentoProvider
 
             // Chamada síncrona que executa e já retorna os dados do dataset
             var endpoint = $"https://api.apify.com/v2/acts/compass~crawler-google-places/run-sync-get-dataset-items?token={token}&timeout=90";
-            
+
             var response = await _httpClient.PostAsync(endpoint, jsonContent, ct);
             if (!response.IsSuccessStatusCode)
             {

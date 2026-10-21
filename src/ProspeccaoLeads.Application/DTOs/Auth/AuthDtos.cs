@@ -30,6 +30,8 @@ public class RegisterDto
     [Required(ErrorMessage = "A confirmação de senha é obrigatória.")]
     [Compare(nameof(Password), ErrorMessage = "As senhas não conferem.")]
     public string ConfirmPassword { get; set; } = string.Empty;
+
+    public string? RedirectUrl { get; set; }
 }
 
 public class ResetPasswordDto
@@ -37,6 +39,8 @@ public class ResetPasswordDto
     [Required(ErrorMessage = "O e-mail é obrigatório.")]
     [EmailAddress(ErrorMessage = "Informe um e-mail válido.")]
     public string Email { get; set; } = string.Empty;
+
+    public string? RedirectUrl { get; set; }
 }
 
 public class UserSessionDto
@@ -45,6 +49,7 @@ public class UserSessionDto
     public string Name { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     public string? AccessToken { get; set; }
+    public string? RefreshToken { get; set; }
     public DateTime? ExpiresAt { get; set; }
 }
 

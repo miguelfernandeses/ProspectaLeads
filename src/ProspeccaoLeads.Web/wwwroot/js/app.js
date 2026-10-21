@@ -1,4 +1,4 @@
-window.prospeccaoJs = {
+window.prospectaiJs = {
     downloadFromBase64: function (fileName, contentType, base64Data) {
         const linkSource = `data:${contentType};base64,${base64Data}`;
         const downloadLink = document.createElement("a");
@@ -24,5 +24,23 @@ window.prospeccaoJs = {
             document.execCommand('copy');
             textArea.remove();
         }
+    },
+
+    getAuthCallbackParameters: function () {
+        const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+        const query = new URLSearchParams(window.location.search);
+        const read = (name) => hash.get(name) || query.get(name);
+
+        return {
+            accessToken: read("access_token"),
+            refreshToken: read("refresh_token"),
+            expiresIn: Number.parseInt(read("expires_in") || "", 10) || null,
+            error: read("error"),
+            errorDescription: read("error_description")
+        };
+    },
+
+    clearAuthCallbackParameters: function () {
+        window.history.replaceState({}, document.title, window.location.pathname);
     }
 };

@@ -19,8 +19,10 @@
 - 📥 **Exportação de Dados**:
   - Exportação em formato **Excel (.xlsx)** e **CSV** estruturado.
 - 🔐 **Autenticação & Segurança**:
-  - Login local individual sem serviços pagos ou integração com Supabase Auth.
-  - Sessão protegida e páginas privadas com autorização.
+  - Cadastro, confirmação de e-mail, login, logout e recuperação de senha com Supabase Auth.
+  - Login com Google via OAuth 2.0 + PKCE.
+  - Renovação automática de sessão e armazenamento protegido no navegador.
+  - Login local reservado ao desenvolvimento, sem serviços pagos.
   - Suporte a banco de dados **PostgreSQL (Supabase)** ou **SQLite** local para desenvolvimento.
 
 ---
@@ -56,17 +58,40 @@ Copie o arquivo de exemplo:
 cp .env.example .env
 ```
 
-Para uso individual gratuito, configure suas próprias credenciais no arquivo `.env`:
+Para autenticação real de vários usuários, configure o Supabase no arquivo `.env`:
 ```env
-Authentication__Mode=Local
-LocalAuth__Email=seu-email@exemplo.com
-LocalAuth__Password=crie-uma-senha-forte
-LocalAuth__Name=Administrador
-ConnectionStrings__DefaultConnection=
+Authentication__Mode=Supabase
+Authentication__GoogleEnabled=true
+App__BaseUrl=http://localhost:5210
+Database__Mode=Local
+Supabase__Url=https://SEU_PROJETO.supabase.co
+Supabase__AnonKey=SUA_CHAVE_ANONIMA_AQUI
 ```
 
-Com a conexão vazia, a aplicação usa SQLite local. Para uma futura versão comercial,
-remova o modo `Local` e preencha as configurações do Supabase descritas em `.env.example`.
+No painel do Supabase, mantenha o provedor **Email** ativo e adicione estas Redirect URLs:
+
+```text
+http://localhost:5210/auth/callback
+http://localhost:5210/redefinir-senha
+```
+
+Para ativar o Google:
+
+1. Crie um cliente OAuth do tipo **Web application** no Google Cloud.
+2. No Google, use a callback exibida em Supabase → Authentication → Providers → Google.
+3. Informe o Client ID e Client Secret no provedor Google do Supabase.
+4. Adicione a URL publicada do ProspectAI à lista de Redirect URLs do Supabase.
+
+O login social está incluído no plano gratuito do Supabase dentro da franquia de usuários ativos.
+Não confunda esta configuração com `GooglePlaces__ApiKey`, que pertence à busca de estabelecimentos.
+
+O modo `Database__Mode=Local` usa SQLite mesmo quando o Supabase cuida da autenticação.
+Só altere para `Database__Mode=Postgres` depois de validar `ConnectionStrings__DefaultConnection`.
+Para desenvolvimento estritamente local, altere também `Authentication__Mode=Local` e configure
+`LocalAuth__Email` e `LocalAuth__Password`.
+
+> O Supabase nunca mostra senhas existentes. Se uma senha for esquecida, use o fluxo
+> **Esqueceu a senha?** para criar uma nova.
 
 ### 3. Rodar a Aplicação
 ```bash

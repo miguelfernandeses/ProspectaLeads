@@ -14,6 +14,13 @@ public interface IAuthenticationService
 {
     Task<Result<UserSessionDto>> LoginAsync(LoginDto dto, CancellationToken ct = default);
     Task<Result<UserSessionDto>> RegisterAsync(RegisterDto dto, CancellationToken ct = default);
+    Result<string> GetGoogleSignInUrl(string redirectUrl, string codeChallenge);
+    Task<Result<UserSessionDto>> ExchangeOAuthCodeAsync(string authCode, string codeVerifier, CancellationToken ct = default);
+    Task<Result<UserSessionDto>> CompleteTokenSignInAsync(
+        string accessToken,
+        string? refreshToken = null,
+        int? expiresInSeconds = null,
+        CancellationToken ct = default);
     Task LogoutAsync(CancellationToken ct = default);
     Task<UserSessionDto?> GetCurrentUserAsync(CancellationToken ct = default);
 }
