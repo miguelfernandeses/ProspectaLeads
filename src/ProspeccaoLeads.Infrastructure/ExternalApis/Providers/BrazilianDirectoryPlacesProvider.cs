@@ -550,14 +550,14 @@ public class BrazilianDirectoryPlacesProvider : IEstabelecimentoProvider
         var c = cidade.ToLowerInvariant().Trim();
         var uf = estado.ToUpperInvariant().Trim();
 
-        if (c.Contains("araras") || c.Contains("leme") || c.Contains("rio claro") || 
-            c.Contains("limeira") || c.Contains("campinas") || c.Contains("piracicaba") || 
+        if (c.Contains("araras") || c.Contains("leme") || c.Contains("rio claro") ||
+            c.Contains("limeira") || c.Contains("campinas") || c.Contains("piracicaba") ||
             c.Contains("americana") || c.Contains("sumaré") || c.Contains("hortolândia"))
         {
             return "19";
         }
 
-        if (c.Contains("são paulo") || c.Contains("guarulhos") || c.Contains("osasco") || 
+        if (c.Contains("são paulo") || c.Contains("guarulhos") || c.Contains("osasco") ||
             c.Contains("santo andré") || c.Contains("são bernardo"))
         {
             return "11";

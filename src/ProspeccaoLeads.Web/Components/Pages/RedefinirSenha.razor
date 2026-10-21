@@ -81,31 +81,12 @@
         {
             try
             {
-                // Extrai o access_token do hash (#access_token=...) ou da query string (?access_token=... ou ?code=...)
-                var hashOrSearch = await JS.InvokeAsync<string>("eval", "window.location.hash || window.location.search || ''");
-                
-                if (!string.IsNullOrWhiteSpace(hashOrSearch))
+                var callback = await JS.InvokeAsync<AuthCallbackParameters>("prospectaiJs.getAuthCallbackParameters");
+                if (!string.IsNullOrWhiteSpace(callback.AccessToken))
                 {
-                    var clean = hashOrSearch.TrimStart('#', '?');
-                    var paramsDict = clean.Split('&')
-                        .Select(p => p.Split('='))
-                        .Where(p => p.Length == 2)
-                        .ToDictionary(p => Uri.UnescapeDataString(p[0]), p => Uri.UnescapeDataString(p[1]));
-
-                    if (paramsDict.TryGetValue("access_token", out var token) && !string.IsNullOrWhiteSpace(token))
-                    {
-                        _accessToken = token;
-                        _tokenMissing = false;
-                    }
-                    else if (paramsDict.TryGetValue("code", out var code) && !string.IsNullOrWhiteSpace(code))
-                    {
-                        _accessToken = code;
-                        _tokenMissing = false;
-                    }
-                    else
-                    {
-                        _tokenMissing = true;
-                    }
+                    _accessToken = callback.AccessToken;
+                    _tokenMissing = false;
+                    await JS.InvokeVoidAsync("prospectaiJs.clearAuthCallbackParameters");
                 }
                 else
                 {
@@ -150,5 +131,10 @@
         {
             _isLoading = false;
         }
+    }
+
+    private sealed class AuthCallbackParameters
+    {
+        public string? AccessToken { get; set; }
     }
 }

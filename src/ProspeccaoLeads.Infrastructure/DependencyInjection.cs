@@ -27,16 +27,23 @@ public static class DependencyInjection
         var activeConnection = !string.IsNullOrWhiteSpace(connectionString) && !connectionString.Contains("SEU_BANCO")
             ? connectionString
             : (!string.IsNullOrWhiteSpace(supabaseDbUrl) && !supabaseDbUrl.Contains("SEU_BANCO") ? supabaseDbUrl : null);
+        var databaseMode = configuration["Database:Mode"] ?? "Local";
 
-        if (!string.IsNullOrWhiteSpace(activeConnection))
+        if (string.Equals(databaseMode, "Postgres", StringComparison.OrdinalIgnoreCase))
         {
+            if (string.IsNullOrWhiteSpace(activeConnection))
+            {
+                throw new InvalidOperationException(
+                    "Database:Mode está como Postgres, mas nenhuma conexão válida foi configurada.");
+            }
+
             var parsedConnection = FormatPostgreSqlConnectionString(activeConnection);
             services.AddDbContext<AppDbContext>(options =>
                 options.UseNpgsql(parsedConnection));
         }
         else
         {
-            // Fallback para SQLite em desenvolvimento local caso as chaves não estejam configuradas ainda
+            // SQLite é o padrão estável e gratuito. PostgreSQL só é ativado explicitamente.
             var dbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "prospeccao_local.db");
             services.AddDbContext<AppDbContext>(options =>
                 options.UseSqlite($"Data Source={dbPath}"));

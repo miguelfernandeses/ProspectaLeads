@@ -5,6 +5,7 @@
 @using ProspeccaoLeads.Web.Services
 @inject IAuthService AuthService
 @inject CustomAuthenticationStateProvider AuthStateProvider
+@inject OAuthFlowStore OAuthFlowStore
 @inject NavigationManager Navigation
 @inject ToastService ToastService
 @inject IConfiguration Configuration
@@ -49,10 +50,22 @@
 
     @if (!IsLocalMode)
     {
+        <div style="display: flex; align-items: center; gap: 12px; margin: 22px 0; color: var(--text-muted); font-size: 0.78rem;">
+            <span style="height: 1px; flex: 1; background: var(--border-color);"></span>
+            <span>OU</span>
+            <span style="height: 1px; flex: 1; background: var(--border-color);"></span>
+        </div>
+
+        <button type="button" class="btn-modern btn-secondary" style="width: 100%; justify-content: center;" disabled="@_isLoading" @onclick="HandleGoogleLogin">
+            <span style="font-weight: 800; font-size: 1.05rem;">G</span>
+            <span>Continuar com Google</span>
+        </button>
+
         <div style="text-align: center; margin-top: 24px; font-size: 0.88rem; color: var(--text-secondary);">
             Não possui uma conta? <a href="cadastro" style="color: var(--primary); font-weight: 600; text-decoration: none;">Cadastre-se agora</a>
         </div>
     }
+
 </div>
 
 @code {
@@ -83,6 +96,31 @@
             {
                 ToastService.ShowError(result.ErrorMessage ?? "Falha na autenticação. Verifique seu e-mail e senha.");
             }
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task HandleGoogleLogin()
+    {
+        _isLoading = true;
+        try
+        {
+            var verifier = PkceHelper.CreateVerifier();
+            var challenge = PkceHelper.CreateChallenge(verifier);
+            var callbackUrl = Navigation.ToAbsoluteUri("auth/callback").ToString();
+            var result = AuthService.GetGoogleSignInUrl(callbackUrl, challenge);
+
+            if (result.IsFailure || string.IsNullOrWhiteSpace(result.Value))
+            {
+                ToastService.ShowError(result.ErrorMessage ?? "Não foi possível iniciar o login com Google.");
+                return;
+            }
+
+            await OAuthFlowStore.SaveVerifierAsync(verifier);
+            Navigation.NavigateTo(result.Value, forceLoad: true);
         }
         finally
         {
