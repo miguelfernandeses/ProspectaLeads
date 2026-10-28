@@ -112,4 +112,27 @@ public class EstabelecimentoServiceTests
             p => p.BuscarAsync("Academia", "Campinas - SP", It.IsAny<int>(), It.IsAny<CancellationToken>()),
             Times.Exactly(2));
     }
+    [Fact]
+    public async Task BuscarAsync_ComConsultaLivre_DeveSepararRamoECidade()
+    {
+        _providerMock
+            .Setup(p => p.BuscarAsync("mecanica", "Limeira - SP", 30, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<EstabelecimentoDto>
+            {
+                new() { Nome = "Auto Center Limeira", Cidade = "Limeira" }
+            });
+        _leadRepoMock.Setup(r => r.GetAllAsync(_userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<Lead>());
+
+        var resultado = await _service.BuscarAsync(new BuscaEstabelecimentoDto
+        {
+            Nicho = "mecanica Limeira"
+        }, _userId);
+
+        resultado.IsSuccess.Should().BeTrue();
+        resultado.Value.Should().ContainSingle();
+        _historyServiceMock.Verify(
+            h => h.RegistrarBuscaAsync(_userId, "mecanica", "Limeira - SP", 1, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
 }

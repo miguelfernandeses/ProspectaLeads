@@ -1,4 +1,5 @@
 @page "/buscar"
+@using ProspeccaoLeads.Application.Common.Search
 @using ProspeccaoLeads.Application.DTOs.Estabelecimento
 @using ProspeccaoLeads.Application.DTOs.Lead
 @using ProspeccaoLeads.Application.Interfaces
@@ -27,14 +28,32 @@
             </p>
         </div>
 
-        <EditForm Model="_buscaDto" FormName="searchForm" OnValidSubmit="ExecutarBuscaAsync">
+        <EditForm Model="_buscaDto" FormName="searchForm" OnSubmit="PrepararEExecutarBuscaAsync">
             <DataAnnotationsValidator />
 
             <div class="search-form-grid">
+                <div class="form-group search-free-field" style="margin-bottom: 0;">
+                    <label class="form-label">Busca livre</label>
+                    <input type="text"
+                           class="form-control-custom"
+                           list="sugestoes-ramos"
+                           placeholder="Ex.: mecânica Limeira, floricultura Campinas"
+                           value="@_consultaLivre"
+                           @oninput="OnConsultaLivreInput"
+                           autocomplete="off" />
+                    <datalist id="sugestoes-ramos">
+                        @foreach (var categoria in CatalogoBuscaProspeccao.Categorias)
+                        {
+                            <option value="@categoria"></option>
+                        }
+                    </datalist>
+                    <div class="form-hint">Digite do seu jeito. Se incluir uma cidade conhecida, nós separamos automaticamente.</div>
+                </div>
+
                 <!-- Nicho: Dropdown de categorias -->
                 <div class="form-group" style="margin-bottom: 0;">
-                    <label class="form-label">Categoria / Ramo de Negócio</label>
-                    <select class="form-control-custom" @bind="_buscaDto.Nicho" style="cursor: pointer;">
+                    <label class="form-label">Ou selecione uma categoria</label>
+                    <select class="form-control-custom" value="@_buscaDto.Nicho" @onchange="OnCategoriaSelecionada" style="cursor: pointer;">
                         <option value="">-- Selecione uma categoria --</option>
                         <optgroup label="🦷 Saúde">
                             <option value="Clínicas odontológicas">Clínicas odontológicas</option>
@@ -118,7 +137,7 @@
 
                 <!-- Localização com autocomplete -->
                 <div class="form-group" style="margin-bottom: 0; position: relative;">
-                    <label class="form-label">Cidade</label>
+                    <label class="form-label">Cidade <span style="font-weight: 400; color: var(--text-muted);">(se não estiver na busca livre)</span></label>
                     <input type="text"
                            class="form-control-custom"
                            placeholder="Digite a cidade... ex: Araras, São Paulo, Curitiba"
@@ -306,11 +325,8 @@
     [SupplyParameterFromQuery(Name = "nicho")] public string? NichoQuery { get; set; }
     [SupplyParameterFromQuery(Name = "local")] public string? LocalQuery { get; set; }
 
-    private readonly BuscaEstabelecimentoDto _buscaDto = new()
-    {
-        Nicho = "Clínicas odontológicas",
-        Localizacao = "Araras - SP"
-    };
+    private readonly BuscaEstabelecimentoDto _buscaDto = new();
+    private string _consultaLivre = string.Empty;
 
     private List<EstabelecimentoDto>? _resultados;
     private bool _isSearching = false;
@@ -322,60 +338,7 @@
     private bool _mostrarSugestoes = false;
     private List<string> _cidadesFiltradas = new();
 
-    private static readonly string[] _todasAsCidades = new[]
-    {
-        // São Paulo - DDD 11
-        "São Paulo - SP", "Guarulhos - SP", "Osasco - SP", "Santo André - SP",
-        "São Bernardo do Campo - SP", "Mogi das Cruzes - SP", "Barueri - SP", "Cotia - SP",
-        "Itaquaquecetuba - SP", "Carapicuíba - SP", "Taboão da Serra - SP", "Santos - SP",
-        "São Vicente - SP", "Guarujá - SP", "Praia Grande - SP",
-        // São Paulo Interior - DDD 19
-        "Campinas - SP", "Araras - SP", "Limeira - SP", "Piracicaba - SP",
-        "Rio Claro - SP", "Leme - SP", "Americana - SP", "Santa Bárbara d'Oeste - SP",
-        "Sumaré - SP", "Hortolândia - SP", "Jundiaí - SP", "Indaiatuba - SP",
-        "Itu - SP", "Salto - SP", "Valinhos - SP", "Vinhedo - SP", "Itatiba - SP",
-        "Bragança Paulista - SP", "Atibaia - SP",
-        // São Paulo Interior - DDD 16
-        "Ribeirão Preto - SP", "Franca - SP", "Araraquara - SP", "São Carlos - SP",
-        "Barretos - SP", "Jaboticabal - SP",
-        // São Paulo Interior - DDD 17
-        "São José do Rio Preto - SP", "Catanduva - SP", "Votuporanga - SP",
-        // São Paulo Interior - DDD 14
-        "Bauru - SP", "Marília - SP", "Jaú - SP", "Lins - SP",
-        // São Paulo Interior - DDD 15
-        "Sorocaba - SP", "Botucatu - SP", "Itapetininga - SP",
-        // São Paulo Interior - DDD 12
-        "São José dos Campos - SP", "Taubaté - SP", "Jacareí - SP", "Pindamonhangaba - SP",
-        // São Paulo Interior - DDD 18
-        "Presidente Prudente - SP", "Araçatuba - SP",
-        // Rio de Janeiro
-        "Rio de Janeiro - RJ", "Niterói - RJ", "Nova Iguaçu - RJ", "Duque de Caxias - RJ",
-        "São Gonçalo - RJ", "Campos dos Goytacazes - RJ", "Petrópolis - RJ", "Nova Friburgo - RJ",
-        // Minas Gerais
-        "Belo Horizonte - MG", "Contagem - MG", "Uberlândia - MG", "Juiz de Fora - MG",
-        "Betim - MG", "Uberaba - MG", "Governador Valadares - MG", "Montes Claros - MG",
-        // Paraná
-        "Curitiba - PR", "Londrina - PR", "Maringá - PR", "Foz do Iguaçu - PR",
-        "Ponta Grossa - PR", "Cascavel - PR",
-        // Rio Grande do Sul
-        "Porto Alegre - RS", "Caxias do Sul - RS", "Canoas - RS", "Pelotas - RS",
-        "Santa Maria - RS", "Novo Hamburgo - RS",
-        // Santa Catarina
-        "Florianópolis - SC", "Joinville - SC", "Blumenau - SC", "Chapecó - SC",
-        "Criciúma - SC", "Itajaí - SC",
-        // Bahia
-        "Salvador - BA", "Feira de Santana - BA", "Vitória da Conquista - BA", "Camaçari - BA",
-        // Ceará
-        "Fortaleza - CE", "Caucaia - CE", "Juazeiro do Norte - CE",
-        // Pernambuco
-        "Recife - PE", "Olinda - PE", "Caruaru - PE", "Petrolina - PE",
-        // Outros estados
-        "Brasília - DF", "Manaus - AM", "Belém - PA", "Goiânia - GO",
-        "Campo Grande - MS", "Cuiabá - MT", "Natal - RN", "João Pessoa - PB",
-        "Maceió - AL", "Aracaju - SE", "Teresina - PI", "São Luís - MA",
-        "Macapá - AP", "Boa Vista - RR", "Porto Velho - RO", "Rio Branco - AC",
-        "Palmas - TO", "Vitória - ES"
-    };
+    private static readonly IReadOnlyList<string> _todasAsCidades = CatalogoBuscaProspeccao.Cidades;
 
     private void OnCidadeInput(ChangeEventArgs e)
     {
@@ -395,6 +358,21 @@
             _cidadesFiltradas = new();
             _mostrarSugestoes = false;
         }
+    }
+
+    private void OnConsultaLivreInput(ChangeEventArgs e)
+    {
+        _consultaLivre = e.Value?.ToString() ?? string.Empty;
+        if (!string.IsNullOrWhiteSpace(_consultaLivre))
+        {
+            _buscaDto.Nicho = _consultaLivre;
+        }
+    }
+
+    private void OnCategoriaSelecionada(ChangeEventArgs e)
+    {
+        _buscaDto.Nicho = e.Value?.ToString() ?? string.Empty;
+        _consultaLivre = string.Empty;
     }
 
     private void SelecionarCidadeSugerida(string cidade)
@@ -426,6 +404,7 @@
         if (!string.IsNullOrWhiteSpace(NichoQuery))
         {
             _buscaDto.Nicho = NichoQuery;
+            _consultaLivre = NichoQuery;
         }
         if (!string.IsNullOrWhiteSpace(LocalQuery))
         {
@@ -433,6 +412,32 @@
         }
 
         if (!string.IsNullOrWhiteSpace(NichoQuery) || !string.IsNullOrWhiteSpace(LocalQuery))
+        {
+            await ExecutarBuscaAsync();
+        }
+    }
+
+    private async Task PrepararEExecutarBuscaAsync(Microsoft.AspNetCore.Components.Forms.EditContext editContext)
+    {
+        if (!string.IsNullOrWhiteSpace(_consultaLivre))
+        {
+            var consulta = InterpretadorBuscaLivre.Interpretar(
+                _consultaLivre,
+                _buscaDto.Localizacao,
+                _todasAsCidades);
+
+            _buscaDto.Nicho = consulta.Nicho;
+            _buscaDto.Localizacao = consulta.Localizacao;
+            if (consulta.LocalizacaoInferida)
+            {
+                _consultaLivre = consulta.Nicho;
+                ToastService.ShowInfo($"Busca interpretada como '{consulta.Nicho}' em {consulta.Localizacao}.");
+            }
+        }
+
+        editContext.NotifyFieldChanged(editContext.Field(nameof(BuscaEstabelecimentoDto.Nicho)));
+        editContext.NotifyFieldChanged(editContext.Field(nameof(BuscaEstabelecimentoDto.Localizacao)));
+        if (editContext.Validate())
         {
             await ExecutarBuscaAsync();
         }

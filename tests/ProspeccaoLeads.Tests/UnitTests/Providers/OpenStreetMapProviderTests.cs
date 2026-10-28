@@ -44,6 +44,23 @@ public class OpenStreetMapProviderTests
         handler.RequestCount.Should().Be(1);
     }
 
+    [Theory]
+    [InlineData("mecanica", "car_repair")]
+    [InlineData("reparação automotiva", "car_repair")]
+    [InlineData("floricultura", "florist")]
+    public async Task BuscarAsync_DeveNormalizarTextoLivreParaFiltroOsm(string nicho, string filtroEsperado)
+    {
+        var handler = new StubHandler(request => request.RequestUri!.Host.Contains("nominatim")
+            ? Json("[{\"lat\":\"-22.56\",\"lon\":\"-47.40\"}]")
+            : Json("{\"elements\":[]}"));
+        var provider = new OpenStreetMapProvider(
+            new HttpClient(handler),
+            Mock.Of<ILogger<OpenStreetMapProvider>>());
+
+        await provider.BuscarAsync(nicho, "Limeira - SP", 10);
+
+        handler.RequestBodies.Should().Contain(body => body.Contains(filtroEsperado));
+    }
     private static HttpResponseMessage Json(string content)
     {
         return new HttpResponseMessage(HttpStatusCode.OK)
@@ -62,13 +79,19 @@ public class OpenStreetMapProviderTests
         }
 
         public int RequestCount { get; private set; }
+        public List<string> RequestBodies { get; } = new();
 
-        protected override Task<HttpResponseMessage> SendAsync(
+        protected override async Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
             CancellationToken cancellationToken)
         {
             RequestCount++;
-            return Task.FromResult(_responseFactory(request));
+            if (request.Content != null)
+            {
+                RequestBodies.Add(await request.Content.ReadAsStringAsync(cancellationToken));
+            }
+
+            return _responseFactory(request);
         }
     }
 }

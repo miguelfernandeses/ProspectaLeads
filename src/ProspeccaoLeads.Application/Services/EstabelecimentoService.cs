@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using ProspeccaoLeads.Application.Common;
+using ProspeccaoLeads.Application.Common.Search;
 using ProspeccaoLeads.Application.DTOs.Estabelecimento;
 using ProspeccaoLeads.Application.Interfaces;
 using ProspeccaoLeads.Domain.Interfaces;
@@ -37,18 +38,20 @@ public class EstabelecimentoService : IEstabelecimentoService
         Guid userId,
         CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(dto.Nicho))
+        var consulta = InterpretadorBuscaLivre.Interpretar(dto.Nicho, dto.Localizacao);
+        if (string.IsNullOrWhiteSpace(consulta.Nicho))
         {
             return Result<List<EstabelecimentoDto>>.Failure("O nicho de pesquisa é obrigatório.");
         }
 
-        if (string.IsNullOrWhiteSpace(dto.Localizacao))
+        if (string.IsNullOrWhiteSpace(consulta.Localizacao))
         {
-            return Result<List<EstabelecimentoDto>>.Failure("A localização da pesquisa é obrigatória.");
+            return Result<List<EstabelecimentoDto>>.Failure(
+                "Informe uma cidade ou inclua uma cidade conhecida na busca, como 'mecânica Limeira'.");
         }
 
-        var nicho = dto.Nicho.Trim();
-        var localizacao = dto.Localizacao.Trim();
+        var nicho = consulta.Nicho;
+        var localizacao = consulta.Localizacao;
         var maxResultados = Math.Clamp(
             dto.MaxResultados > 0 ? dto.MaxResultados : DefaultMaxResultados,
             1,

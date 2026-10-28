@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
+using ProspeccaoLeads.Application.Common.Search;
 using ProspeccaoLeads.Application.DTOs.Estabelecimento;
 using ProspeccaoLeads.Application.Interfaces;
 
@@ -248,53 +249,143 @@ public class OpenStreetMapProvider : IEstabelecimentoProvider
 
     private static string MapearNichoParaTagsOsm(string nicho)
     {
-        var n = nicho.ToLowerInvariant().Trim();
+        var n = InterpretadorBuscaLivre.Normalizar(nicho);
 
-        if (n.Contains("odonto") || n.Contains("dent") || n.Contains("clínica"))
+        if (ContemAlgum(n, "oficina", "mecanica", "mecanico", "auto center", "centro automotivo", "reparacao automotiva"))
         {
-            return "[\"healthcare\"~\"dentist|clinic|doctor\"]";
+            return "[\"shop\"~\"car_repair|car_parts|tyres\"]";
         }
-        if (n.Contains("restaurante") || n.Contains("lanchonete") || n.Contains("comida") || n.Contains("pizzaria") || n.Contains("hamburg"))
+        if (ContemAlgum(n, "autopeca", "peca automotiva"))
+        {
+            return "[\"shop\"~\"car_parts|tyres\"]";
+        }
+        if (ContemAlgum(n, "lava jato", "lavagem automotiva", "estetica automotiva"))
+        {
+            return "[\"amenity\"~\"car_wash\"]";
+        }
+        if (ContemAlgum(n, "pet", "veterin", "animal", "banho e tosa"))
+        {
+            return "[\"shop\"~\"pet|pet_grooming\"]";
+        }
+        if (ContemAlgum(n, "odonto", "dentista", "dentaria"))
+        {
+            return "[\"healthcare\"~\"dentist\"]";
+        }
+        if (ContemAlgum(n, "clinica", "consultorio", "medico", "psicolog", "fisioter", "nutricion"))
+        {
+            return "[\"healthcare\"~\"clinic|doctor|psychotherapist|physiotherapist|nutrition_counselling\"]";
+        }
+        if (ContemAlgum(n, "restaurante", "lanchonete", "comida", "pizzaria", "hamburg", "churrascaria"))
         {
             return "[\"amenity\"~\"restaurant|fast_food|cafe|bar|pub\"]";
         }
-        if (n.Contains("academia") || n.Contains("fitness") || n.Contains("crossfit") || n.Contains("treino"))
+        if (ContemAlgum(n, "padaria", "confeitaria"))
+        {
+            return "[\"shop\"~\"bakery|confectionery\"]";
+        }
+        if (ContemAlgum(n, "academia", "fitness", "crossfit", "treino", "pilates", "yoga"))
         {
             return "[\"leisure\"~\"fitness_centre|sports_centre\"]";
         }
-        if (n.Contains("salão") || n.Contains("cabelo") || n.Contains("beleza") || n.Contains("barbearia") || n.Contains("estética"))
+        if (ContemAlgum(n, "salao", "cabelo", "beleza", "barbearia", "estetica", "manicure", "pedicure"))
         {
             return "[\"shop\"~\"hairdresser|beauty\"]";
         }
-        if (n.Contains("oficina") || n.Contains("mecânica") || n.Contains("auto") || n.Contains("carro"))
+        if (ContemAlgum(n, "tatuagem", "tattoo"))
         {
-            return "[\"shop\"~\"car_repair|car\"]";
+            return "[\"shop\"~\"tattoo\"]";
         }
-        if (n.Contains("imobili") || n.Contains("imóve") || n.Contains("corretor"))
+        if (ContemAlgum(n, "imobili", "imove", "corretor"))
         {
             return "[\"office\"~\"estate_agent\"]";
         }
-        if (n.Contains("roupa") || n.Contains("vestuário") || n.Contains("moda") || n.Contains("loja"))
+        if (ContemAlgum(n, "construtora", "reforma", "arquiteto", "engenheiro"))
+        {
+            return "[\"office\"~\"architect|engineer|construction_company\"]";
+        }
+        if (ContemAlgum(n, "eletricista", "encanador", "hidraulica"))
+        {
+            return "[\"craft\"~\"electrician|plumber\"]";
+        }
+        if (ContemAlgum(n, "roupa", "vestuario", "moda"))
         {
             return "[\"shop\"~\"clothes|boutique|department_store\"]";
         }
-        if (n.Contains("contab") || n.Contains("contador") || n.Contains("fiscal"))
+        if (ContemAlgum(n, "calcado", "sapato"))
+        {
+            return "[\"shop\"~\"shoes\"]";
+        }
+        if (ContemAlgum(n, "otica", "oculos"))
+        {
+            return "[\"shop\"~\"optician\"]";
+        }
+        if (ContemAlgum(n, "papelaria", "livraria"))
+        {
+            return "[\"shop\"~\"stationery|books\"]";
+        }
+        if (ContemAlgum(n, "mercado", "supermercado", "mercearia"))
+        {
+            return "[\"shop\"~\"supermarket|convenience|greengrocer\"]";
+        }
+        if (ContemAlgum(n, "contab", "contador", "fiscal"))
         {
             return "[\"office\"~\"accountant|financial|tax_advisor\"]";
         }
-        if (n.Contains("pet") || n.Contains("veterin") || n.Contains("animal"))
+        if (ContemAlgum(n, "advocacia", "advogado", "juridico"))
         {
-            return "[\"shop\"~\"pet\"]";
+            return "[\"office\"~\"lawyer\"]";
         }
-        if (n.Contains("farmácia") || n.Contains("drogaria"))
+        if (ContemAlgum(n, "marketing", "publicidade", "propaganda"))
+        {
+            return "[\"office\"~\"advertising_agency|consulting\"]";
+        }
+        if (ContemAlgum(n, "escola", "colegio", "curso", "treinamento", "idioma"))
+        {
+            return "[\"amenity\"~\"school|college|language_school|music_school|training\"]";
+        }
+        if (ContemAlgum(n, "transportadora", "logistica", "frete", "mudanca"))
+        {
+            return "[\"office\"~\"logistics|moving_company\"]";
+        }
+        if (ContemAlgum(n, "floricultura", "flores"))
+        {
+            return "[\"shop\"~\"florist\"]";
+        }
+        if (ContemAlgum(n, "maquina agricola", "motor agricola", "implemento agricola"))
+        {
+            return "[\"craft\"~\"agricultural_engines\"]";
+        }
+        if (ContemAlgum(n, "farmacia", "drogaria"))
         {
             return "[\"amenity\"~\"pharmacy\"]";
         }
 
-        // Genérico: busca qualquer comércio/escritório/serviço com nome
-        return "[\"name\"]";
+        return CriarFiltroGenerico(n);
     }
 
+    private static bool ContemAlgum(string texto, params string[] termos)
+    {
+        return termos.Any(texto.Contains);
+    }
+
+    private static string CriarFiltroGenerico(string nichoNormalizado)
+    {
+        var ignorados = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "para", "com", "sem", "empresa", "empresas", "servico", "servicos", "loja", "lojas"
+        };
+        var termos = Regex.Matches(nichoNormalizado, "[a-z0-9]+")
+            .Select(match => match.Value)
+            .Where(termo => termo.Length >= 4 && !ignorados.Contains(termo))
+            .Distinct(StringComparer.Ordinal)
+            .Take(3)
+            .Select(Regex.Escape)
+            .ToArray();
+
+        return termos.Length == 0
+            ? "[\"name\"]"
+            : $"[\"name\"~\"{string.Join('|', termos)}\",i]";
+    }
     private static (double Lat, double Lon)? ObterCoordenadasConhecidas(string cidade)
     {
         var c = cidade.ToLowerInvariant().Trim();
