@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using ProspeccaoLeads.Application.Common;
+using ProspeccaoLeads.Application.Common.Search;
 using ProspeccaoLeads.Application.DTOs.Estabelecimento;
 using ProspeccaoLeads.Application.Interfaces;
 using ProspeccaoLeads.Domain.Interfaces;
@@ -37,23 +38,28 @@ public class EstabelecimentoService : IEstabelecimentoService
         Guid userId,
         CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(dto.Nicho))
+        var consulta = InterpretadorBuscaLivre.Interpretar(dto.Nicho, dto.Localizacao);
+        if (string.IsNullOrWhiteSpace(consulta.Nicho))
         {
             return Result<List<EstabelecimentoDto>>.Failure("O nicho de pesquisa é obrigatório.");
         }
 
-        if (string.IsNullOrWhiteSpace(dto.Localizacao))
+        if (string.IsNullOrWhiteSpace(consulta.Localizacao))
         {
-            return Result<List<EstabelecimentoDto>>.Failure("A localização da pesquisa é obrigatória.");
+            return Result<List<EstabelecimentoDto>>.Failure(
+                "Informe uma cidade ou inclua uma cidade conhecida na busca, como 'mecânica Limeira'.");
         }
 
-        var nicho = dto.Nicho.Trim();
-        var localizacao = dto.Localizacao.Trim();
-        var maxResultados = dto.MaxResultados > 0 ? dto.MaxResultados : DefaultMaxResultados;
+        var nicho = consulta.Nicho;
+        var localizacao = consulta.Localizacao;
+        var maxResultados = Math.Clamp(
+            dto.MaxResultados > 0 ? dto.MaxResultados : DefaultMaxResultados,
+            1,
+            100);
 
         List<EstabelecimentoDto> resultados = new();
 
-        var cacheKey = $"search_{nicho.ToLowerInvariant()}_{localizacao.ToLowerInvariant()}";
+        var cacheKey = $"search_{nicho.ToLowerInvariant()}_{localizacao.ToLowerInvariant()}_{maxResultados}";
         if (_memoryCache.TryGetValue(cacheKey, out List<EstabelecimentoDto>? cachedResultados) && cachedResultados != null && cachedResultados.Count > 0)
         {
             _logger.LogInformation("Retornando {Count} resultados do cache em memória para '{Nicho}' em '{Loc}'", cachedResultados.Count, nicho, localizacao);
@@ -99,9 +105,9 @@ public class EstabelecimentoService : IEstabelecimentoService
 
         // Cruzar com os leads já salvos pelo usuário para marcar duplicatas
         var leadsUsuario = await _leadRepository.GetAllAsync(userId, ct);
-        var leadsMap = leadsUsuario.ToDictionary(
-            l => $"{l.Nome.ToLowerInvariant()}|{l.Cidade?.ToLowerInvariant()}",
-            l => l.Id);
+        var leadsMap = leadsUsuario
+            .GroupBy(l => $"{l.Nome.ToLowerInvariant()}|{l.Cidade?.ToLowerInvariant()}")
+            .ToDictionary(group => group.Key, group => group.First().Id);
 
         foreach (var item in resultados)
         {

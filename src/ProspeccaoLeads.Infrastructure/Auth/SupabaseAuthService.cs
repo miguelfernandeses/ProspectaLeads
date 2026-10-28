@@ -1,5 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -18,6 +19,7 @@ public class SupabaseAuthService : IAuthService
     private readonly HttpClient _httpClient;
     private readonly IConfiguration _configuration;
     private readonly IUserRepository _userRepository;
+    private readonly IUserSessionStore _sessionStore;
     private readonly ILogger<SupabaseAuthService> _logger;
 
     private UserSessionDto? _currentSession;
@@ -26,11 +28,13 @@ public class SupabaseAuthService : IAuthService
         HttpClient httpClient,
         IConfiguration configuration,
         IUserRepository userRepository,
+        IUserSessionStore sessionStore,
         ILogger<SupabaseAuthService> logger)
     {
         _httpClient = httpClient;
         _configuration = configuration;
         _userRepository = userRepository;
+        _sessionStore = sessionStore;
         _logger = logger;
     }
 
@@ -39,6 +43,11 @@ public class SupabaseAuthService : IAuthService
         if (string.IsNullOrWhiteSpace(dto.Email) || string.IsNullOrWhiteSpace(dto.Password))
         {
             return Result<UserSessionDto>.Failure("E-mail e senha são obrigatórios.");
+        }
+
+        if (IsLocalMode())
+        {
+            return await LoginLocalAsync(dto, ct);
         }
 
         var supabaseUrl = _configuration["Supabase:Url"];
@@ -95,7 +104,7 @@ public class SupabaseAuthService : IAuthService
                             CreatedAt = DateTime.UtcNow
                         }, ct);
 
-                        _currentSession = session;
+                        await SetCurrentSessionAsync(session, ct);
                         return Result<UserSessionDto>.Success(session);
                     }
                 }
@@ -103,7 +112,7 @@ public class SupabaseAuthService : IAuthService
                 {
                     var errJson = await response.Content.ReadAsStringAsync(ct);
                     _logger.LogWarning("Supabase Auth falhou: {StatusCode} - {Err}", response.StatusCode, errJson);
-                    
+
                     var errNode = JsonNode.Parse(errJson);
                     var msg = errNode?["msg"]?.ToString() ?? errNode?["error_description"]?.ToString() ?? errNode?["message"]?.ToString();
 
@@ -126,33 +135,8 @@ public class SupabaseAuthService : IAuthService
             }
         }
 
-        // Modo Demonstração / Desenvolvimento Local (Zero setup friction)
-        var demoUserId = Guid.Parse("11111111-1111-1111-1111-111111111111");
-        var demoName = dto.Email.Split('@')[0];
-        if (string.Equals(dto.Email, "admin@prospeccaoleads.com", StringComparison.OrdinalIgnoreCase))
-        {
-            demoName = "Administrador";
-        }
-
-        var demoSession = new UserSessionDto
-        {
-            UserId = demoUserId,
-            Name = char.ToUpper(demoName[0]) + demoName[1..],
-            Email = dto.Email.Trim(),
-            AccessToken = "local-dev-token",
-            ExpiresAt = DateTime.UtcNow.AddDays(30)
-        };
-
-        await _userRepository.AddOrUpdateAsync(new UserProfile
-        {
-            Id = demoUserId,
-            Name = demoSession.Name,
-            Email = demoSession.Email,
-            CreatedAt = DateTime.UtcNow
-        }, ct);
-
-        _currentSession = demoSession;
-        return Result<UserSessionDto>.Success(demoSession);
+        return Result<UserSessionDto>.Failure(
+            "Autenticação não configurada. Defina Authentication__Mode=Local ou configure o Supabase.");
     }
 
     public async Task<Result<UserSessionDto>> RegisterAsync(RegisterDto dto, CancellationToken ct = default)
@@ -165,6 +149,12 @@ public class SupabaseAuthService : IAuthService
         if (dto.Password != dto.ConfirmPassword)
         {
             return Result<UserSessionDto>.Failure("A confirmação de senha não confere.");
+        }
+
+        if (IsLocalMode())
+        {
+            return Result<UserSessionDto>.Failure(
+                "O cadastro está desativado no modo local. Use o usuário configurado no arquivo .env.");
         }
 
         var supabaseUrl = _configuration["Supabase:Url"];
@@ -219,7 +209,7 @@ public class SupabaseAuthService : IAuthService
                             CreatedAt = DateTime.UtcNow
                         }, ct);
 
-                        _currentSession = session;
+                        await SetCurrentSessionAsync(session, ct);
                         return Result<UserSessionDto>.Success(session);
                     }
                 }
@@ -250,27 +240,8 @@ public class SupabaseAuthService : IAuthService
             }
         }
 
-        // Modo Demonstração / Desenvolvimento Local
-        var newUserId = Guid.NewGuid();
-        var sessionCreated = new UserSessionDto
-        {
-            UserId = newUserId,
-            Name = dto.Name.Trim(),
-            Email = dto.Email.Trim(),
-            AccessToken = "local-dev-token",
-            ExpiresAt = DateTime.UtcNow.AddDays(30)
-        };
-
-        await _userRepository.AddOrUpdateAsync(new UserProfile
-        {
-            Id = newUserId,
-            Name = sessionCreated.Name,
-            Email = sessionCreated.Email,
-            CreatedAt = DateTime.UtcNow
-        }, ct);
-
-        _currentSession = sessionCreated;
-        return Result<UserSessionDto>.Success(sessionCreated);
+        return Result<UserSessionDto>.Failure(
+            "Autenticação não configurada. Configure o Supabase para permitir novos cadastros.");
     }
 
     public async Task<Result> ResetPasswordAsync(ResetPasswordDto dto, CancellationToken ct = default)
@@ -278,6 +249,11 @@ public class SupabaseAuthService : IAuthService
         if (string.IsNullOrWhiteSpace(dto.Email))
         {
             return Result.Failure("O e-mail é obrigatório.");
+        }
+
+        if (IsLocalMode())
+        {
+            return Result.Failure("No modo local, altere a senha em LocalAuth__Password no arquivo .env.");
         }
 
         var supabaseUrl = _configuration["Supabase:Url"];
@@ -328,7 +304,7 @@ public class SupabaseAuthService : IAuthService
             }
         }
 
-        return Result.Success();
+        return Result.Failure("Autenticação não configurada.");
     }
 
     public async Task<Result> UpdatePasswordWithTokenAsync(string accessToken, string newPassword, CancellationToken ct = default)
@@ -381,7 +357,7 @@ public class SupabaseAuthService : IAuthService
             }
         }
 
-        return Result.Success();
+        return Result.Failure("Autenticação não configurada.");
     }
 
     public async Task<Result> ChangePasswordAsync(ChangePasswordDto dto, CancellationToken ct = default)
@@ -394,6 +370,11 @@ public class SupabaseAuthService : IAuthService
         if (dto.NewPassword != dto.ConfirmNewPassword)
         {
             return Result.Failure("A confirmação da nova senha não confere.");
+        }
+
+        if (IsLocalMode())
+        {
+            return Result.Failure("No modo local, altere a senha em LocalAuth__Password no arquivo .env.");
         }
 
         var session = _currentSession;
@@ -438,8 +419,7 @@ public class SupabaseAuthService : IAuthService
             }
         }
 
-        // Modo Demonstração / Sessão Local
-        return Result.Success();
+        return Result.Failure("Sessão de autenticação inválida ou expirada.");
     }
 
     public async Task<Result<UserSessionDto>> UpdateProfileAsync(UpdateProfileDto dto, CancellationToken ct = default)
@@ -449,12 +429,11 @@ public class SupabaseAuthService : IAuthService
             return Result<UserSessionDto>.Failure("O nome deve ter no mínimo 2 caracteres.");
         }
 
-        var session = _currentSession ?? new UserSessionDto
+        var session = _currentSession;
+        if (session == null)
         {
-            UserId = Guid.Parse("11111111-1111-1111-1111-111111111111"),
-            Email = "admin@prospeccaoleads.com",
-            Name = "Administrador"
-        };
+            return Result<UserSessionDto>.Failure("Sessão de autenticação inválida ou expirada.");
+        }
 
         var trimmedName = dto.Name.Trim();
         session.Name = trimmedName;
@@ -500,18 +479,85 @@ public class SupabaseAuthService : IAuthService
             CreatedAt = DateTime.UtcNow
         }, ct);
 
-        _currentSession = session;
+        await SetCurrentSessionAsync(session, ct);
         return Result<UserSessionDto>.Success(session);
     }
 
-    public Task LogoutAsync(CancellationToken ct = default)
+    public async Task LogoutAsync(CancellationToken ct = default)
     {
         _currentSession = null;
-        return Task.CompletedTask;
+        await _sessionStore.ClearAsync(ct);
     }
 
-    public Task<UserSessionDto?> GetCurrentUserAsync(CancellationToken ct = default)
+    public async Task<UserSessionDto?> GetCurrentUserAsync(CancellationToken ct = default)
     {
-        return Task.FromResult<UserSessionDto?>(_currentSession);
+        _currentSession ??= await _sessionStore.LoadAsync(ct);
+        if (_currentSession?.ExpiresAt <= DateTime.UtcNow)
+        {
+            await LogoutAsync(ct);
+        }
+
+        return _currentSession;
+    }
+
+    private bool IsLocalMode()
+    {
+        return string.Equals(
+            _configuration["Authentication:Mode"],
+            "Local",
+            StringComparison.OrdinalIgnoreCase);
+    }
+
+    private async Task<Result<UserSessionDto>> LoginLocalAsync(LoginDto dto, CancellationToken ct)
+    {
+        var configuredEmail = _configuration["LocalAuth:Email"]?.Trim();
+        var configuredPassword = _configuration["LocalAuth:Password"];
+        var configuredName = _configuration["LocalAuth:Name"]?.Trim();
+
+        if (string.IsNullOrWhiteSpace(configuredEmail) || string.IsNullOrWhiteSpace(configuredPassword))
+        {
+            return Result<UserSessionDto>.Failure(
+                "Credenciais locais não configuradas. Defina LocalAuth__Email e LocalAuth__Password.");
+        }
+
+        var emailMatches = string.Equals(dto.Email.Trim(), configuredEmail, StringComparison.OrdinalIgnoreCase);
+        var suppliedPassword = Encoding.UTF8.GetBytes(dto.Password);
+        var expectedPassword = Encoding.UTF8.GetBytes(configuredPassword);
+        var passwordMatches = suppliedPassword.Length == expectedPassword.Length &&
+                              CryptographicOperations.FixedTimeEquals(suppliedPassword, expectedPassword);
+
+        if (!emailMatches || !passwordMatches)
+        {
+            return Result<UserSessionDto>.Failure("Credenciais inválidas. Verifique seu e-mail e senha.");
+        }
+
+        var userId = Guid.TryParse(_configuration["LocalAuth:UserId"], out var configuredUserId)
+            ? configuredUserId
+            : Guid.Parse("11111111-1111-1111-1111-111111111111");
+        var session = new UserSessionDto
+        {
+            UserId = userId,
+            Name = string.IsNullOrWhiteSpace(configuredName) ? configuredEmail.Split('@')[0] : configuredName,
+            Email = configuredEmail,
+            AccessToken = "local-session",
+            ExpiresAt = DateTime.UtcNow.AddDays(30)
+        };
+
+        await _userRepository.AddOrUpdateAsync(new UserProfile
+        {
+            Id = session.UserId,
+            Name = session.Name,
+            Email = session.Email,
+            CreatedAt = DateTime.UtcNow
+        }, ct);
+
+        await SetCurrentSessionAsync(session, ct);
+        return Result<UserSessionDto>.Success(session);
+    }
+
+    private async Task SetCurrentSessionAsync(UserSessionDto session, CancellationToken ct)
+    {
+        _currentSession = session;
+        await _sessionStore.SaveAsync(session, ct);
     }
 }

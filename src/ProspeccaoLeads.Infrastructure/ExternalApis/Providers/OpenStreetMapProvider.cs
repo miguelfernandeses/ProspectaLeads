@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
+using ProspeccaoLeads.Application.Common.Search;
 using ProspeccaoLeads.Application.DTOs.Estabelecimento;
 using ProspeccaoLeads.Application.Interfaces;
 
@@ -22,7 +23,7 @@ public class OpenStreetMapProvider : IEstabelecimentoProvider
         _logger = logger;
         if (!_httpClient.DefaultRequestHeaders.Contains("User-Agent"))
         {
-            _httpClient.DefaultRequestHeaders.Add("User-Agent", "ProspeccaoLeadsApp/1.0 (contact@prospeccaoleads.com)");
+            _httpClient.DefaultRequestHeaders.Add("User-Agent", "ProspectAI/1.0");
         }
     }
 
@@ -84,7 +85,7 @@ public class OpenStreetMapProvider : IEstabelecimentoProvider
 
             if (!geoEncontrado)
             {
-                var fallbackCoords = ObterCoordenadasConhecidas(cidade, estado);
+                var fallbackCoords = ObterCoordenadasConhecidas(cidade);
                 if (fallbackCoords.HasValue)
                 {
                     centerLat = fallbackCoords.Value.Lat;
@@ -229,8 +230,6 @@ public class OpenStreetMapProvider : IEstabelecimentoProvider
                     CEP = postcode,
                     Website = website,
                     Instagram = instagram,
-                    Avaliacao = 4.5m + (decimal)(Random.Shared.Next(0, 5) * 0.1),
-                    QuantidadeAvaliacoes = Random.Shared.Next(12, 180),
                     Latitude = lat,
                     Longitude = lon,
                     Fonte = "OpenStreetMap",
@@ -250,54 +249,145 @@ public class OpenStreetMapProvider : IEstabelecimentoProvider
 
     private static string MapearNichoParaTagsOsm(string nicho)
     {
-        var n = nicho.ToLowerInvariant().Trim();
+        var n = InterpretadorBuscaLivre.Normalizar(nicho);
 
-        if (n.Contains("odonto") || n.Contains("dent") || n.Contains("clínica"))
+        if (ContemAlgum(n, "oficina", "mecanica", "mecanico", "auto center", "centro automotivo", "reparacao automotiva"))
         {
-            return "[\"healthcare\"~\"dentist|clinic|doctor\"]";
+            return "[\"shop\"~\"car_repair|car_parts|tyres\"]";
         }
-        if (n.Contains("restaurante") || n.Contains("lanchonete") || n.Contains("comida") || n.Contains("pizzaria") || n.Contains("hamburg"))
+        if (ContemAlgum(n, "autopeca", "peca automotiva"))
+        {
+            return "[\"shop\"~\"car_parts|tyres\"]";
+        }
+        if (ContemAlgum(n, "lava jato", "lavagem automotiva", "estetica automotiva"))
+        {
+            return "[\"amenity\"~\"car_wash\"]";
+        }
+        if (ContemAlgum(n, "pet", "veterin", "animal", "banho e tosa"))
+        {
+            return "[\"shop\"~\"pet|pet_grooming\"]";
+        }
+        if (ContemAlgum(n, "odonto", "dentista", "dentaria"))
+        {
+            return "[\"healthcare\"~\"dentist\"]";
+        }
+        if (ContemAlgum(n, "clinica", "consultorio", "medico", "psicolog", "fisioter", "nutricion"))
+        {
+            return "[\"healthcare\"~\"clinic|doctor|psychotherapist|physiotherapist|nutrition_counselling\"]";
+        }
+        if (ContemAlgum(n, "restaurante", "lanchonete", "comida", "pizzaria", "hamburg", "churrascaria"))
         {
             return "[\"amenity\"~\"restaurant|fast_food|cafe|bar|pub\"]";
         }
-        if (n.Contains("academia") || n.Contains("fitness") || n.Contains("crossfit") || n.Contains("treino"))
+        if (ContemAlgum(n, "padaria", "confeitaria"))
+        {
+            return "[\"shop\"~\"bakery|confectionery\"]";
+        }
+        if (ContemAlgum(n, "academia", "fitness", "crossfit", "treino", "pilates", "yoga"))
         {
             return "[\"leisure\"~\"fitness_centre|sports_centre\"]";
         }
-        if (n.Contains("salão") || n.Contains("cabelo") || n.Contains("beleza") || n.Contains("barbearia") || n.Contains("estética"))
+        if (ContemAlgum(n, "salao", "cabelo", "beleza", "barbearia", "estetica", "manicure", "pedicure"))
         {
             return "[\"shop\"~\"hairdresser|beauty\"]";
         }
-        if (n.Contains("oficina") || n.Contains("mecânica") || n.Contains("auto") || n.Contains("carro"))
+        if (ContemAlgum(n, "tatuagem", "tattoo"))
         {
-            return "[\"shop\"~\"car_repair|car\"]";
+            return "[\"shop\"~\"tattoo\"]";
         }
-        if (n.Contains("imobili") || n.Contains("imóve") || n.Contains("corretor"))
+        if (ContemAlgum(n, "imobili", "imove", "corretor"))
         {
             return "[\"office\"~\"estate_agent\"]";
         }
-        if (n.Contains("roupa") || n.Contains("vestuário") || n.Contains("moda") || n.Contains("loja"))
+        if (ContemAlgum(n, "construtora", "reforma", "arquiteto", "engenheiro"))
+        {
+            return "[\"office\"~\"architect|engineer|construction_company\"]";
+        }
+        if (ContemAlgum(n, "eletricista", "encanador", "hidraulica"))
+        {
+            return "[\"craft\"~\"electrician|plumber\"]";
+        }
+        if (ContemAlgum(n, "roupa", "vestuario", "moda"))
         {
             return "[\"shop\"~\"clothes|boutique|department_store\"]";
         }
-        if (n.Contains("contab") || n.Contains("contador") || n.Contains("fiscal"))
+        if (ContemAlgum(n, "calcado", "sapato"))
+        {
+            return "[\"shop\"~\"shoes\"]";
+        }
+        if (ContemAlgum(n, "otica", "oculos"))
+        {
+            return "[\"shop\"~\"optician\"]";
+        }
+        if (ContemAlgum(n, "papelaria", "livraria"))
+        {
+            return "[\"shop\"~\"stationery|books\"]";
+        }
+        if (ContemAlgum(n, "mercado", "supermercado", "mercearia"))
+        {
+            return "[\"shop\"~\"supermarket|convenience|greengrocer\"]";
+        }
+        if (ContemAlgum(n, "contab", "contador", "fiscal"))
         {
             return "[\"office\"~\"accountant|financial|tax_advisor\"]";
         }
-        if (n.Contains("pet") || n.Contains("veterin") || n.Contains("animal"))
+        if (ContemAlgum(n, "advocacia", "advogado", "juridico"))
         {
-            return "[\"shop\"~\"pet\"]";
+            return "[\"office\"~\"lawyer\"]";
         }
-        if (n.Contains("farmácia") || n.Contains("drogaria"))
+        if (ContemAlgum(n, "marketing", "publicidade", "propaganda"))
+        {
+            return "[\"office\"~\"advertising_agency|consulting\"]";
+        }
+        if (ContemAlgum(n, "escola", "colegio", "curso", "treinamento", "idioma"))
+        {
+            return "[\"amenity\"~\"school|college|language_school|music_school|training\"]";
+        }
+        if (ContemAlgum(n, "transportadora", "logistica", "frete", "mudanca"))
+        {
+            return "[\"office\"~\"logistics|moving_company\"]";
+        }
+        if (ContemAlgum(n, "floricultura", "flores"))
+        {
+            return "[\"shop\"~\"florist\"]";
+        }
+        if (ContemAlgum(n, "maquina agricola", "motor agricola", "implemento agricola"))
+        {
+            return "[\"craft\"~\"agricultural_engines\"]";
+        }
+        if (ContemAlgum(n, "farmacia", "drogaria"))
         {
             return "[\"amenity\"~\"pharmacy\"]";
         }
 
-        // Genérico: busca qualquer comércio/escritório/serviço com nome
-        return "[\"name\"]";
+        return CriarFiltroGenerico(n);
     }
 
-    private static (double Lat, double Lon)? ObterCoordenadasConhecidas(string cidade, string estado)
+    private static bool ContemAlgum(string texto, params string[] termos)
+    {
+        return termos.Any(texto.Contains);
+    }
+
+    private static string CriarFiltroGenerico(string nichoNormalizado)
+    {
+        var ignorados = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "para", "com", "sem", "empresa", "empresas", "servico", "servicos", "loja", "lojas"
+        };
+        var termos = Regex.Matches(nichoNormalizado, "[a-z0-9]+")
+            .Select(match => match.Value)
+            .Where(termo => termo.Length >= 4 && !ignorados.Contains(termo))
+            .Distinct(StringComparer.Ordinal)
+            .Take(3)
+            .Select(Regex.Escape)
+            .ToArray();
+
+        return termos.Length == 0
+            ? "[\"name\"]"
+            : $"[\"name\"~\"{string.Join('|', termos)}\",i]";
+    }
+
+    private static (double Lat, double Lon)? ObterCoordenadasConhecidas(string cidade)
     {
         var c = cidade.ToLowerInvariant().Trim();
         if (c.Contains("araras")) return (-22.3572, -47.3842);
@@ -306,16 +396,16 @@ public class OpenStreetMapProvider : IEstabelecimentoProvider
         if (c.Contains("limeira")) return (-22.5647, -47.4017);
         if (c.Contains("piracicaba")) return (-22.7253, -47.6492);
         if (c.Contains("campinas")) return (-22.9099, -47.0626);
-        if (c.Contains("são paulo") || estado.Equals("SP", StringComparison.OrdinalIgnoreCase)) return (-23.5505, -46.6333);
+        if (c.Contains("são paulo")) return (-23.5505, -46.6333);
         if (c.Contains("santos")) return (-23.9618, -46.3322);
-        if (c.Contains("curitiba") || estado.Equals("PR", StringComparison.OrdinalIgnoreCase)) return (-25.4284, -49.2733);
-        if (c.Contains("belo horizonte") || estado.Equals("MG", StringComparison.OrdinalIgnoreCase)) return (-19.9167, -43.9345);
-        if (c.Contains("rio de janeiro") || estado.Equals("RJ", StringComparison.OrdinalIgnoreCase)) return (-22.9068, -43.1729);
-        if (c.Contains("brasília") || estado.Equals("DF", StringComparison.OrdinalIgnoreCase)) return (-15.7975, -47.8919);
-        if (c.Contains("salvador") || estado.Equals("BA", StringComparison.OrdinalIgnoreCase)) return (-12.9777, -38.5016);
-        if (c.Contains("porto alegre") || estado.Equals("RS", StringComparison.OrdinalIgnoreCase)) return (-30.0346, -51.2177);
+        if (c.Contains("curitiba")) return (-25.4284, -49.2733);
+        if (c.Contains("belo horizonte")) return (-19.9167, -43.9345);
+        if (c.Contains("rio de janeiro")) return (-22.9068, -43.1729);
+        if (c.Contains("brasília")) return (-15.7975, -47.8919);
+        if (c.Contains("salvador")) return (-12.9777, -38.5016);
+        if (c.Contains("porto alegre")) return (-30.0346, -51.2177);
 
-        return (-23.5505, -46.6333);
+        return null;
     }
 
     private static string ExtrairCidade(string localizacao)

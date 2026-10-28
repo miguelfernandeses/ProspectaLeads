@@ -80,4 +80,60 @@ public class EstabelecimentoServiceTests
 
         _historyServiceMock.Verify(h => h.RegistrarBuscaAsync(_userId, "Academia", "São Paulo - SP", 2, It.IsAny<CancellationToken>()), Times.Once);
     }
+
+    [Fact]
+    public async Task BuscarAsync_ComLimitesDiferentes_NaoDeveReutilizarCacheIncompativel()
+    {
+        _providerMock
+            .Setup(p => p.BuscarAsync("Academia", "Campinas - SP", It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string _, string _, int max, CancellationToken _) =>
+                Enumerable.Range(1, max)
+                    .Select(i => new EstabelecimentoDto { Nome = $"Academia {i}", Cidade = "Campinas" })
+                    .ToList());
+        _leadRepoMock.Setup(r => r.GetAllAsync(_userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<Lead>());
+
+        var primeira = await _service.BuscarAsync(new BuscaEstabelecimentoDto
+        {
+            Nicho = "Academia",
+            Localizacao = "Campinas - SP",
+            MaxResultados = 10
+        }, _userId);
+        var segunda = await _service.BuscarAsync(new BuscaEstabelecimentoDto
+        {
+            Nicho = "Academia",
+            Localizacao = "Campinas - SP",
+            MaxResultados = 20
+        }, _userId);
+
+        primeira.Value.Should().HaveCount(10);
+        segunda.Value.Should().HaveCount(20);
+        _providerMock.Verify(
+            p => p.BuscarAsync("Academia", "Campinas - SP", It.IsAny<int>(), It.IsAny<CancellationToken>()),
+            Times.Exactly(2));
+    }
+
+    [Fact]
+    public async Task BuscarAsync_ComConsultaLivre_DeveSepararRamoECidade()
+    {
+        _providerMock
+            .Setup(p => p.BuscarAsync("mecanica", "Limeira - SP", 30, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<EstabelecimentoDto>
+            {
+                new() { Nome = "Auto Center Limeira", Cidade = "Limeira" }
+            });
+        _leadRepoMock.Setup(r => r.GetAllAsync(_userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<Lead>());
+
+        var resultado = await _service.BuscarAsync(new BuscaEstabelecimentoDto
+        {
+            Nicho = "mecanica Limeira"
+        }, _userId);
+
+        resultado.IsSuccess.Should().BeTrue();
+        resultado.Value.Should().ContainSingle();
+        _historyServiceMock.Verify(
+            h => h.RegistrarBuscaAsync(_userId, "mecanica", "Limeira - SP", 1, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
 }

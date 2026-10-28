@@ -696,6 +696,16 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* Autocomplete de cidade */
+.search-free-field {
+    grid-column: 1 / -1;
+}
+
+.form-hint {
+    margin-top: 6px;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+}
+
 .autocomplete-list {
     position: absolute;
     top: 100%;

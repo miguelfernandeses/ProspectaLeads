@@ -197,33 +197,33 @@ public class LeadRepository : ILeadRepository
     {
         if (!string.IsNullOrWhiteSpace(search))
         {
-            var s = search.Trim();
+            var s = search.Trim().ToLower();
             query = query.Where(l =>
-                EF.Functions.ILike(l.Nome, $"%{s}%") ||
-                (l.Telefone != null && EF.Functions.ILike(l.Telefone, $"%{s}%")) ||
-                (l.Email != null && EF.Functions.ILike(l.Email, $"%{s}%")) ||
-                (l.Endereco != null && EF.Functions.ILike(l.Endereco, $"%{s}%")) ||
-                (l.Observacoes != null && EF.Functions.ILike(l.Observacoes, $"%{s}%")) ||
-                (l.Cidade != null && EF.Functions.ILike(l.Cidade, $"%{s}%")) ||
-                (l.Categoria != null && EF.Functions.ILike(l.Categoria, $"%{s}%")));
+                l.Nome.ToLower().Contains(s) ||
+                (l.Telefone != null && l.Telefone.ToLower().Contains(s)) ||
+                (l.Email != null && l.Email.ToLower().Contains(s)) ||
+                (l.Endereco != null && l.Endereco.ToLower().Contains(s)) ||
+                (l.Observacoes != null && l.Observacoes.ToLower().Contains(s)) ||
+                (l.Cidade != null && l.Cidade.ToLower().Contains(s)) ||
+                (l.Categoria != null && l.Categoria.ToLower().Contains(s)));
         }
 
         if (!string.IsNullOrWhiteSpace(niche))
         {
-            var n = niche.Trim();
-            query = query.Where(l => l.Categoria != null && EF.Functions.ILike(l.Categoria, $"%{n}%"));
+            var n = niche.Trim().ToLower();
+            query = query.Where(l => l.Categoria != null && l.Categoria.ToLower().Contains(n));
         }
 
         if (!string.IsNullOrWhiteSpace(city))
         {
-            var c = city.Trim();
-            query = query.Where(l => l.Cidade != null && EF.Functions.ILike(l.Cidade, $"%{c}%"));
+            var c = city.Trim().ToLower();
+            query = query.Where(l => l.Cidade != null && l.Cidade.ToLower().Contains(c));
         }
 
         if (!string.IsNullOrWhiteSpace(state))
         {
-            var st = state.Trim();
-            query = query.Where(l => l.Estado != null && EF.Functions.ILike(l.Estado, $"%{st}%"));
+            var st = state.Trim().ToLower();
+            query = query.Where(l => l.Estado != null && l.Estado.ToLower().Contains(st));
         }
 
         if (status.HasValue)

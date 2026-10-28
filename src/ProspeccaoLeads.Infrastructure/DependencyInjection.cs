@@ -16,12 +16,12 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         // 1. Configuração do Banco de Dados (PostgreSQL Supabase ou SQLite local)
-        var connectionString = configuration.GetConnectionString("DefaultConnection") 
-            ?? configuration["DATABASE_URL"] 
+        var connectionString = configuration.GetConnectionString("DefaultConnection")
+            ?? configuration["DATABASE_URL"]
             ?? Environment.GetEnvironmentVariable("DATABASE_URL");
 
-        var supabaseDbUrl = configuration["Supabase:DatabaseUrl"] 
-            ?? configuration["SUPABASE_DB_URL"] 
+        var supabaseDbUrl = configuration["Supabase:DatabaseUrl"]
+            ?? configuration["SUPABASE_DB_URL"]
             ?? Environment.GetEnvironmentVariable("SUPABASE_DB_URL");
 
         var activeConnection = !string.IsNullOrWhiteSpace(connectionString) && !connectionString.Contains("SEU_BANCO")
@@ -52,15 +52,12 @@ public static class DependencyInjection
         {
             client.Timeout = TimeSpan.FromSeconds(120);
         });
-        services.AddHttpClient<RealWebPlacesProvider>();
         services.AddHttpClient<GooglePlacesProvider>();
         services.AddHttpClient<OpenStreetMapProvider>();
         services.AddHttpClient<SupabaseAuthService>();
 
         services.AddScoped<IEstabelecimentoProvider, ApifyGoogleMapsProvider>();
-        services.AddScoped<IEstabelecimentoProvider, BrazilianDirectoryPlacesProvider>();
         services.AddScoped<IEstabelecimentoProvider, GooglePlacesProvider>();
-        services.AddScoped<IEstabelecimentoProvider, RealWebPlacesProvider>();
         services.AddScoped<IEstabelecimentoProvider, OpenStreetMapProvider>();
 
         // 4. Exportação & Autenticação (registrando interfaces segregadas e agregada)

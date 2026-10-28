@@ -1,6 +1,32 @@
 ﻿<Router AppAssembly="typeof(Program).Assembly" NotFoundPage="typeof(Pages.NotFound)">
     <Found Context="routeData">
-        <RouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)" />
+        @if (IsPublicPage(routeData.PageType))
+        {
+            <RouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)" />
+        }
+        else
+        {
+            <AuthorizeView>
+                <Authorized>
+                    <RouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)" />
+                </Authorized>
+                <NotAuthorized>
+                    <RedirectToLogin />
+                </NotAuthorized>
+            </AuthorizeView>
+        }
         <FocusOnNavigate RouteData="routeData" Selector="h1" />
     </Found>
 </Router>
+
+@code {
+    private static bool IsPublicPage(Type pageType)
+    {
+        return pageType == typeof(Pages.Login) ||
+               pageType == typeof(Pages.Register) ||
+               pageType == typeof(Pages.ForgotPassword) ||
+               pageType == typeof(Pages.RedefinirSenha) ||
+               pageType == typeof(Pages.Error) ||
+               pageType == typeof(Pages.NotFound);
+    }
+}
