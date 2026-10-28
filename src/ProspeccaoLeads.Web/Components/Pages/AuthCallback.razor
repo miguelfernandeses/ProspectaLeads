@@ -1,0 +1,109 @@
+@page "/auth/callback"
+@layout AuthLayout
+@using ProspeccaoLeads.Application.Interfaces
+@using ProspeccaoLeads.Web.Services
+@inject IAuthService AuthService
+@inject CustomAuthenticationStateProvider AuthStateProvider
+@inject OAuthFlowStore OAuthFlowStore
+@inject NavigationManager Navigation
+@inject ToastService ToastService
+@inject IJSRuntime JS
+@inject ILogger<AuthCallback> Logger
+
+<div class="card-glass" style="padding: 32px; text-align: center;">
+    <div class="spinner" style="width: 32px; height: 32px; border-top-color: var(--primary); margin: 0 auto 16px;"></div>
+    <h2 style="font-size: 1.25rem; margin-bottom: 8px; color: var(--text-primary);">Concluindo seu acesso</h2>
+    <p style="color: var(--text-secondary); font-size: 0.88rem;">Aguarde enquanto validamos sua conta com segurança.</p>
+</div>
+
+@code {
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "code")]
+    public string? Code { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "error")]
+    public string? Error { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "error_description")]
+    public string? ErrorDescription { get; set; }
+
+    private bool _handled;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || _handled)
+        {
+            return;
+        }
+
+        _handled = true;
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(Error))
+            {
+                Fail(ErrorDescription ?? "O provedor recusou a autenticação.");
+                return;
+            }
+
+            Result<UserSessionDto> result;
+            if (!string.IsNullOrWhiteSpace(Code))
+            {
+                var verifier = await OAuthFlowStore.TakeVerifierAsync();
+                if (string.IsNullOrWhiteSpace(verifier))
+                {
+                    Fail("A tentativa de login expirou. Inicie o acesso com Google novamente.");
+                    return;
+                }
+
+                result = await AuthService.ExchangeOAuthCodeAsync(Code, verifier);
+            }
+            else
+            {
+                var callback = await JS.InvokeAsync<AuthCallbackParameters>("prospectaiJs.getAuthCallbackParameters");
+                if (!string.IsNullOrWhiteSpace(callback.Error))
+                {
+                    Fail(callback.ErrorDescription ?? "Não foi possível confirmar sua conta.");
+                    return;
+                }
+
+                result = await AuthService.CompleteTokenSignInAsync(
+                    callback.AccessToken ?? string.Empty,
+                    callback.RefreshToken,
+                    callback.ExpiresIn);
+            }
+
+            await JS.InvokeVoidAsync("prospectaiJs.clearAuthCallbackParameters");
+            if (result.IsFailure || result.Value == null)
+            {
+                Fail(result.ErrorMessage ?? "Não foi possível concluir a autenticação.");
+                return;
+            }
+
+            AuthStateProvider.NotifyUserAuthentication(result.Value);
+            ToastService.ShowSuccess($"Acesso confirmado. Bem-vindo, {result.Value.Name}!");
+            Navigation.NavigateTo("");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Erro inesperado ao concluir o callback de autenticação.");
+            Fail("Ocorreu um erro ao concluir a autenticação. Tente novamente.");
+        }
+    }
+
+    private void Fail(string message)
+    {
+        ToastService.ShowError(message);
+        Navigation.NavigateTo("login");
+    }
+
+    private sealed class AuthCallbackParameters
+    {
+        public string? AccessToken { get; set; }
+        public string? RefreshToken { get; set; }
+        public int? ExpiresIn { get; set; }
+        public string? Error { get; set; }
+        public string? ErrorDescription { get; set; }
+    }
+}

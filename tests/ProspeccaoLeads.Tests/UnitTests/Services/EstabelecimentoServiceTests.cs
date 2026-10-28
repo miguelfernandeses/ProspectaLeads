@@ -112,7 +112,6 @@ public class EstabelecimentoServiceTests
             p => p.BuscarAsync("Academia", "Campinas - SP", It.IsAny<int>(), It.IsAny<CancellationToken>()),
             Times.Exactly(2));
     }
-
     [Fact]
     public async Task BuscarAsync_ComConsultaLivre_DeveSepararRamoECidade()
     {

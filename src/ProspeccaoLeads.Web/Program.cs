@@ -39,7 +39,9 @@ builder.Services.AddRazorComponents()
 builder.Services.AddScoped<ToastService>();
 builder.Services.AddScoped<FileDownloadService>();
 builder.Services.AddScoped<ProtectedLocalStorage>();
+builder.Services.AddScoped<ProtectedSessionStorage>();
 builder.Services.AddScoped<IUserSessionStore, ProtectedBrowserSessionStore>();
+builder.Services.AddScoped<OAuthFlowStore>();
 builder.Services.AddScoped<CustomAuthenticationStateProvider>();
 builder.Services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<CustomAuthenticationStateProvider>());
 builder.Services.AddAuthorizationCore();

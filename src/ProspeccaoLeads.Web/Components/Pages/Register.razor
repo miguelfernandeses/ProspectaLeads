@@ -66,6 +66,7 @@
         _isLoading = true;
         try
         {
+            _model.RedirectUrl = Navigation.ToAbsoluteUri("auth/callback?flow=signup").ToString();
             var result = await AuthService.RegisterAsync(_model);
             if (result.IsSuccess && result.Value != null)
             {
@@ -77,7 +78,7 @@
                 }
                 else
                 {
-                    ToastService.ShowSuccess($"Conta criada para '{result.Value.Email}'! Faça login ou verifique seu e-mail.");
+                    ToastService.ShowSuccess($"Conta criada para '{result.Value.Email}'. Confirme o e-mail para ativar o acesso.");
                     Navigation.NavigateTo("login");
                 }
             }

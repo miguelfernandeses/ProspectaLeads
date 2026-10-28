@@ -386,7 +386,6 @@ public class OpenStreetMapProvider : IEstabelecimentoProvider
             ? "[\"name\"]"
             : $"[\"name\"~\"{string.Join('|', termos)}\",i]";
     }
-
     private static (double Lat, double Lon)? ObterCoordenadasConhecidas(string cidade)
     {
         var c = cidade.ToLowerInvariant().Trim();

@@ -61,7 +61,6 @@ public class OpenStreetMapProviderTests
 
         handler.RequestBodies.Should().Contain(body => body.Contains(filtroEsperado));
     }
-
     private static HttpResponseMessage Json(string content)
     {
         return new HttpResponseMessage(HttpStatusCode.OK)
