@@ -135,4 +135,60 @@ public class EstabelecimentoServiceTests
             h => h.RegistrarBuscaAsync(_userId, "mecanica", "Limeira - SP", 1, It.IsAny<CancellationToken>()),
             Times.Once);
     }
+
+    [Fact]
+    public async Task BuscarAsync_SemResultadosEFalhaNoHistorico_DeveRetornarFalhaDeBuscaSemLancarExcecao()
+    {
+        _providerMock
+            .Setup(p => p.BuscarAsync("mecanica", "Limeira - SP", 30, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<EstabelecimentoDto>());
+        _historyServiceMock
+            .Setup(h => h.RegistrarBuscaAsync(
+                _userId,
+                "mecanica",
+                "Limeira - SP",
+                0,
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("Falha ao salvar histórico"));
+
+        var resultado = await _service.BuscarAsync(new BuscaEstabelecimentoDto
+        {
+            Nicho = "mecanica",
+            Localizacao = "Limeira - SP"
+        }, _userId);
+
+        resultado.IsSuccess.Should().BeFalse();
+        resultado.ErrorMessage.Should().StartWith("Nenhum estabelecimento foi encontrado");
+    }
+
+    [Fact]
+    public async Task BuscarAsync_ComResultadosEFalhaNoHistorico_DeveManterResultadosDaBusca()
+    {
+        _providerMock
+            .Setup(p => p.BuscarAsync("mecanica", "Limeira - SP", 30, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<EstabelecimentoDto>
+            {
+                new() { Nome = "Auto Center Limeira", Cidade = "Limeira" }
+            });
+        _leadRepoMock
+            .Setup(r => r.GetAllAsync(_userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<Lead>());
+        _historyServiceMock
+            .Setup(h => h.RegistrarBuscaAsync(
+                _userId,
+                "mecanica",
+                "Limeira - SP",
+                1,
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("Falha ao salvar histórico"));
+
+        var resultado = await _service.BuscarAsync(new BuscaEstabelecimentoDto
+        {
+            Nicho = "mecanica",
+            Localizacao = "Limeira - SP"
+        }, _userId);
+
+        resultado.IsSuccess.Should().BeTrue();
+        resultado.Value.Should().ContainSingle();
+    }
 }

@@ -99,7 +99,7 @@ public class EstabelecimentoService : IEstabelecimentoService
 
         if (resultados.Count == 0)
         {
-            await _historyService.RegistrarBuscaAsync(userId, nicho, localizacao, 0, ct);
+            await RegistrarHistoricoComSegurancaAsync(userId, nicho, localizacao, 0, ct);
             return Result<List<EstabelecimentoDto>>.Failure("Nenhum estabelecimento foi encontrado para essa pesquisa. Tente modificar o nicho ou a localização.");
         }
 
@@ -131,9 +131,39 @@ public class EstabelecimentoService : IEstabelecimentoService
         }
 
         // Salvar histórico de pesquisa
-        await _historyService.RegistrarBuscaAsync(userId, nicho, localizacao, resultados.Count, ct);
+        await RegistrarHistoricoComSegurancaAsync(userId, nicho, localizacao, resultados.Count, ct);
 
         return Result<List<EstabelecimentoDto>>.Success(resultados);
+    }
+
+    private async Task RegistrarHistoricoComSegurancaAsync(
+        Guid userId,
+        string nicho,
+        string localizacao,
+        int quantidadeResultados,
+        CancellationToken ct)
+    {
+        try
+        {
+            await _historyService.RegistrarBuscaAsync(
+                userId,
+                nicho,
+                localizacao,
+                quantidadeResultados,
+                ct);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "Não foi possível registrar o histórico da busca por '{Nicho}' em '{Localizacao}'. A busca continuará normalmente.",
+                nicho,
+                localizacao);
+        }
     }
 
     private static List<EstabelecimentoDto> ClonarResultados(IEnumerable<EstabelecimentoDto> lista)

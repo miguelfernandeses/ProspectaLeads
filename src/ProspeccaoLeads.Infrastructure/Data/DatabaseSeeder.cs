@@ -19,6 +19,7 @@ public static class DatabaseSeeder
         {
             // Cria tabelas no PostgreSQL/Supabase ou SQLite caso não existam
             await dbContext.Database.EnsureCreatedAsync(ct);
+            await EnsureSearchHistorySchemaAsync(dbContext, ct);
 
             if (seedDemoData && !await dbContext.Users.AnyAsync(u => u.Id == DemoUserId, ct))
             {
@@ -50,6 +51,45 @@ public static class DatabaseSeeder
         catch (Exception ex)
         {
             logger.LogError(ex, "Erro ao inicializar e semear banco de dados.");
+        }
+    }
+
+    private static async Task EnsureSearchHistorySchemaAsync(AppDbContext dbContext, CancellationToken ct)
+    {
+        if (dbContext.Database.IsNpgsql())
+        {
+            await dbContext.Database.ExecuteSqlRawAsync(
+                """
+                CREATE TABLE IF NOT EXISTS public.searches (
+                    id UUID PRIMARY KEY,
+                    user_id UUID NOT NULL,
+                    niche VARCHAR(200) NOT NULL,
+                    location VARCHAR(200) NOT NULL,
+                    result_count INT NOT NULL DEFAULT 0,
+                    created_at TIMESTAMP WITH TIME ZONE NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS idx_searches_user_id
+                    ON public.searches(user_id, created_at DESC);
+                ALTER TABLE public.searches ENABLE ROW LEVEL SECURITY;
+                """,
+                ct);
+        }
+        else if (dbContext.Database.IsSqlite())
+        {
+            await dbContext.Database.ExecuteSqlRawAsync(
+                """
+                CREATE TABLE IF NOT EXISTS searches (
+                    id TEXT NOT NULL CONSTRAINT PK_searches PRIMARY KEY,
+                    user_id TEXT NOT NULL,
+                    niche TEXT NOT NULL,
+                    location TEXT NOT NULL,
+                    result_count INTEGER NOT NULL DEFAULT 0,
+                    created_at TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS IX_searches_user_id_created_at
+                    ON searches(user_id, created_at);
+                """,
+                ct);
         }
     }
 

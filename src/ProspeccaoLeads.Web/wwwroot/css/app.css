@@ -700,6 +700,11 @@ h1, h2, h3, h4, h5, h6 {
     grid-column: 1 / -1;
 }
 
+.card-glass.search-card {
+    overflow: visible;
+    z-index: 2;
+}
+
 .form-hint {
     margin-top: 6px;
     color: var(--text-muted);
